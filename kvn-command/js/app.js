@@ -35,13 +35,21 @@ function renderFatalError(err) {
 let search, store, loadRawEffects, buildSearchPool, bridge;
 
 try {
-  ({ search } = require("./search-engine.js"));
-  store = require("./store.js");
-  ({ loadRawEffects, buildSearchPool } = require("./effects-catalog.js"));
+  // NOTE: app.js is loaded via a plain <script src="js/app.js"> tag rather
+  // than require()'d itself, so UXP resolves the require() calls made from
+  // inside it relative to the plugin ROOT, not relative to js/ — hence the
+  // "js/" prefix here (this bit us: "Module not found" pointing at parent
+  // folder "./"). Files required from one another via require() (e.g.
+  // effects-catalog.js requiring premiere-bridge.js) don't need this,
+  // since normal relative resolution applies once you're inside the
+  // require graph.
+  ({ search } = require("./js/search-engine.js"));
+  store = require("./js/store.js");
+  ({ loadRawEffects, buildSearchPool } = require("./js/effects-catalog.js"));
 
   bridge = null;
   try {
-    bridge = require("./premiere-bridge.js");
+    bridge = require("./js/premiere-bridge.js");
   } catch (err) {
     console.warn("[KVN Command] premierepro host module unavailable — running in preview mode.", err);
   }

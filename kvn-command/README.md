@@ -87,6 +87,17 @@ files pulled in through `require()` as CommonJS modules (`module`,
 runs as a bare global script with no `module` object. So every other file
 is `require()`'d from `app.js` (or transitively), never `<script>`-tagged.
 
+One more UXP-specific gotcha this hit in practice: because `app.js` itself
+is `<script>`-tagged rather than `require()`'d, UXP resolves the
+`require()` calls made *inside* it relative to the **plugin root**, not to
+`js/` — so those calls need a `./js/` prefix (`require("./js/store.js")`,
+not `require("./store.js")`). This only applies to `app.js`; files that
+`require()` each other (e.g. `effects-catalog.js` requiring
+`premiere-bridge.js`) resolve normally relative to their own folder, since
+Node-style relative resolution applies once you're inside the require
+graph. Get this wrong and you get `Error: Module not found: "./foo.js"`
+with the parent module folder reported as `"./"`.
+
 Effects are treated as data end-to-end: `{ id, kind, matchName, displayName,
 category, keywords, aliases, isFavorite, isHidden, isRecent, boost }`.
 Nothing branches on an effect's name — search, ranking, and rendering are
