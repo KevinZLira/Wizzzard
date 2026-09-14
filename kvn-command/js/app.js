@@ -10,15 +10,44 @@
 
 /* global require, document, localStorage */
 
-const { search } = require("./search-engine.js");
-const store = require("./store.js");
-const { loadRawEffects, buildSearchPool } = require("./effects-catalog.js");
+/**
+ * If anything below throws — during module load, during the first render,
+ * or inside an async handler — write the error directly into the panel
+ * instead of leaving a silent black rectangle. This is the only way to
+ * see what broke without going through UDT's separate DevTools window.
+ */
+function renderFatalError(err) {
+  const message = (err && err.stack) || String(err);
+  console.error("[KVN Command] Fatal error:", err);
+  try {
+    document.body.innerHTML = "";
+    const pre = document.createElement("pre");
+    pre.style.cssText =
+      "color:#ff5c5c;background:#080909;padding:14px;margin:0;white-space:pre-wrap;" +
+      "font-family:monospace;font-size:11px;height:100vh;box-sizing:border-box;overflow:auto;";
+    pre.textContent = `KVN Command failed to start:\n\n${message}`;
+    document.body.appendChild(pre);
+  } catch (renderErr) {
+    console.error("[KVN Command] Failed to render fatal error UI:", renderErr);
+  }
+}
 
-let bridge = null;
+let search, store, loadRawEffects, buildSearchPool, bridge;
+
 try {
-  bridge = require("./premiere-bridge.js");
+  ({ search } = require("./search-engine.js"));
+  store = require("./store.js");
+  ({ loadRawEffects, buildSearchPool } = require("./effects-catalog.js"));
+
+  bridge = null;
+  try {
+    bridge = require("./premiere-bridge.js");
+  } catch (err) {
+    console.warn("[KVN Command] premierepro host module unavailable — running in preview mode.", err);
+  }
 } catch (err) {
-  console.warn("[KVN Command] premierepro host module unavailable — running in preview mode.", err);
+  renderFatalError(err);
+  throw err; // stop the rest of this module from running against a broken state
 }
 
 const state = {
@@ -476,25 +505,33 @@ function renderManageList(container, kind) {
 }
 
 function render() {
-  rootEl.innerHTML = "";
-  if (state.view === "settings") {
-    renderSettings(rootEl);
-  } else if (state.view === "manage-favorites") {
-    renderManageList(rootEl, "favorites");
-  } else if (state.view === "manage-hidden") {
-    renderManageList(rootEl, "hidden");
-  } else {
-    renderPalette(rootEl);
+  try {
+    rootEl.innerHTML = "";
+    if (state.view === "settings") {
+      renderSettings(rootEl);
+    } else if (state.view === "manage-favorites") {
+      renderManageList(rootEl, "favorites");
+    } else if (state.view === "manage-hidden") {
+      renderManageList(rootEl, "hidden");
+    } else {
+      renderPalette(rootEl);
+    }
+  } catch (err) {
+    renderFatalError(err);
   }
 }
 
 async function bootstrap(node) {
-  rootEl = node;
-  render(); // show shell immediately (fast open, #21)
+  try {
+    rootEl = node;
+    render(); // show shell immediately (fast open, #21)
 
-  await Promise.all([refreshContext(), refreshEffects()]);
-  computeResults();
-  if (state.view === "palette") render();
+    await Promise.all([refreshContext(), refreshEffects()]);
+    computeResults();
+    if (state.view === "palette") render();
+  } catch (err) {
+    renderFatalError(err);
+  }
 }
 
 /* ---------------------------- UXP wiring ---------------------------- */
@@ -510,9 +547,13 @@ try {
         async show() {
           // Panel regained focus/visibility: selection may have changed
           // while the user was elsewhere (#10).
-          await refreshContext();
-          computeResults();
-          if (state.view === "palette") render();
+          try {
+            await refreshContext();
+            computeResults();
+            if (state.view === "palette") render();
+          } catch (err) {
+            renderFatalError(err);
+          }
         },
       },
     },
