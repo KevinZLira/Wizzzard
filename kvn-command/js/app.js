@@ -544,33 +544,70 @@ async function bootstrap(node) {
 
 /* ---------------------------- UXP wiring ---------------------------- */
 
+// Visible the instant this script executes, so a still-black panel later
+// tells us the script itself never ran (wrong path, load error) rather
+// than something failing after this point.
+(function markScriptStarted() {
+  const marker = document.getElementById("kvn-root") || document.body;
+  if (marker) marker.textContent = "KVN Command — starting…";
+})();
+
+let uxpModule = null;
 try {
-  const { entrypoints } = require("uxp");
-  entrypoints.setup({
-    panels: {
-      "kvn.command.panel": {
-        create(rootNode) {
-          bootstrap(rootNode);
-        },
-        async show() {
-          // Panel regained focus/visibility: selection may have changed
-          // while the user was elsewhere (#10).
-          try {
-            await refreshContext();
-            computeResults();
-            if (state.view === "palette") render();
-          } catch (err) {
-            renderFatalError(err);
-          }
-        },
-      },
-    },
-  });
+  uxpModule = require("uxp");
 } catch (err) {
   // Not running inside UXP (e.g. opened directly in a browser for layout
-  // iteration) — fall back to mounting straight into the page body.
+  // iteration) — mount straight into the page. The document has already
+  // been parsed up to this script tag, so #kvn-root exists now; no need
+  // to wait for DOMContentLoaded (which may have already fired).
   console.warn("[KVN Command] uxp module unavailable — mounting standalone.", err);
-  document.addEventListener("DOMContentLoaded", () => {
-    bootstrap(document.getElementById("kvn-root"));
-  });
+  bootstrap(document.getElementById("kvn-root"));
+}
+
+if (uxpModule) {
+  try {
+    uxpModule.entrypoints.setup({
+      panels: {
+        "kvn.command.panel": {
+          create(rootNode) {
+            bootstrap(rootNode);
+          },
+          async show() {
+            // Panel regained focus/visibility: selection may have changed
+            // while the user was elsewhere (#10).
+            try {
+              await refreshContext();
+              computeResults();
+              if (state.view === "palette") render();
+            } catch (err) {
+              renderFatalError(err);
+            }
+          },
+        },
+      },
+    });
+  } catch (err) {
+    // A throw here is a real host-side problem (bad entrypoint id, wrong
+    // setup() shape, ...) — surface it instead of leaving a black panel.
+    renderFatalError(err);
+  }
+
+  // Watchdog: if the host never calls create() at all (id mismatch, a
+  // panel entrypoint that silently isn't wired up, ...) there is no
+  // exception to catch — the panel just stays empty forever. Say so
+  // explicitly instead of leaving that indistinguishable from "still
+  // starting".
+  setTimeout(() => {
+    if (!rootEl) {
+      renderFatalError(
+        new Error(
+          "entrypoints.setup() ran with no error, but the host never called " +
+            'create() for panel id "kvn.command.panel". Check that this id ' +
+            "matches the panel entrypoint's \"id\" in manifest.json exactly, " +
+            "and that Premiere Pro actually opened this panel (Window ▸ " +
+            "Extensions ▸ KVN Command)."
+        )
+      );
+    }
+  }, 4000);
 }
