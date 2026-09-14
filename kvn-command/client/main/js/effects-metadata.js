@@ -1,3 +1,5 @@
+window.KVN = window.KVN || {};
+
 /**
  * effects-metadata.js
  *
@@ -19,7 +21,7 @@
  * effect list.
  */
 
-const EFFECTS_METADATA = {
+window.KVN.EffectsMetadata = {
   "Gaussian Blur": {
     category: "Blur & Sharpen",
     keywords: ["blur", "soft", "smooth", "desfoque", "borrão", "difuminado"],
@@ -158,4 +160,3 @@ const EFFECTS_METADATA = {
   },
 };
 
-module.exports = { EFFECTS_METADATA };
