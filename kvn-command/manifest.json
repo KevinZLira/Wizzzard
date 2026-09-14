@@ -41,9 +41,6 @@
   ],
   "requiredPermissions": {
     "localFileSystem": "plugin",
-    "network": {
-      "domains": "none"
-    },
     "clipboard": "readAndWrite"
   },
   "icons": [
