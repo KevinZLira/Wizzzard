@@ -25,6 +25,39 @@ function renderFatalError(err) {
   }
 }
 
+/**
+ * Same idea as renderFatalError but for errors that happen AFTER startup
+ * (a click handler throwing, an unhandled promise rejection) — those
+ * don't get caught by any try/catch we wrote, since they happen inside
+ * an event callback or a detached async chain. Rather than staying
+ * silent (which is exactly the "click and nothing happens" symptom this
+ * exists to rule out), show them in a small fixed banner that doesn't
+ * wipe the rest of the UI and isn't affected by the palette's own
+ * layout/sizing.
+ */
+function showGlobalError(message) {
+  console.error("[KVN Command] Unhandled error:", message);
+  var el = document.getElementById("kvn-global-error");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "kvn-global-error";
+    el.style.cssText =
+      "position:fixed;top:0;left:0;right:0;z-index:99999;background:#2a0a0a;color:#ff8a8a;" +
+      "font-family:monospace;font-size:10px;padding:6px 8px;white-space:pre-wrap;" +
+      "max-height:50vh;overflow:auto;border-bottom:1px solid #ff5c5c;";
+    document.body.appendChild(el);
+  }
+  el.textContent = String(message);
+}
+
+window.addEventListener("error", function (event) {
+  showGlobalError((event.error && event.error.stack) || event.message);
+});
+window.addEventListener("unhandledrejection", function (event) {
+  var reason = event.reason;
+  showGlobalError((reason && reason.stack) || String(reason));
+});
+
 (function () {
   try {
     var search = window.KVN.SearchEngine.search;
@@ -349,6 +382,10 @@ function renderFatalError(err) {
     }
 
     function showToast(toastEl, message, isError) {
+      if (!toastEl) {
+        showGlobalError("showToast called with no toast element found — tried to show: " + message);
+        return;
+      }
       toastEl.textContent = message;
       toastEl.className = "kvn-toast kvn-show" + (isError ? " kvn-error" : "");
       setTimeout(function () {
@@ -357,8 +394,12 @@ function renderFatalError(err) {
     }
 
     async function applyActive() {
+      console.log("[KVN Command] applyActive fired, activeIndex=", state.activeIndex);
       var effect = state.results[state.activeIndex];
-      if (!effect) return;
+      if (!effect) {
+        showGlobalError("applyActive: no effect at activeIndex " + state.activeIndex + " (results.length=" + state.results.length + ")");
+        return;
+      }
 
       var toastEl = rootEl.querySelector(".kvn-toast");
       var input = rootEl.querySelector(".kvn-input");
