@@ -22,7 +22,11 @@ window.KVN.EffectsCatalog = (function () {
   var lastDebug = null; // kept even on a "successful" load — useful when items load but with bad/empty fields
 
   function effectId(hostEffect) {
-    return hostEffect.kind + ":" + hostEffect.matchName;
+    // matchName is null for every effect on this host (see host/ppro.jsx)
+    // — using it here would collide every effect of a given kind onto
+    // the same id, breaking favorites/hidden/recent entirely. displayName
+    // is what's actually confirmed working.
+    return hostEffect.kind + ":" + hostEffect.displayName;
   }
 
   async function loadRawEffects(options) {

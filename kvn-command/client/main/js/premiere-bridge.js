@@ -58,7 +58,10 @@ window.KVN.PremiereBridge = (function () {
       throw new Error("NO_MATCHING_TARGET");
     }
 
-    var response = await bridge.callHostJson("kvnApplyEffect", [effect.matchName, effect.kind]);
+    // matchName isn't resolvable from the host's effect list (see
+    // host/ppro.jsx) — displayName is what's actually confirmed working,
+    // so that's what gets looked up on the host side too.
+    var response = await bridge.callHostJson("kvnApplyEffect", [effect.displayName, effect.kind]);
     if (!response) throw new Error("HOST_UNAVAILABLE");
     return { appliedTo: response.appliedTo || 0, errors: response.errors || [], debug: response.debug || null };
   }

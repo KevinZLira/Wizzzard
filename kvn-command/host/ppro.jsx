@@ -375,7 +375,7 @@ function kvnFindSelectedQeItems(kind, debugOut) {
  * Applies one effect (by matchName) to every currently selected clip of
  * the given kind. Returns { appliedTo, errors: [string] } as JSON.
  */
-function kvnApplyEffect(matchName, kind) {
+function kvnApplyEffect(effectName, kind) {
   try {
     kvnEnsureQE();
 
@@ -392,10 +392,26 @@ function kvnApplyEffect(matchName, kind) {
       return kvnJsonStringify({ appliedTo: 0, errors: ["NO_MATCHING_TARGET"], debug: debug });
     }
 
+    // matchName was never resolvable (the effect list items only expose
+    // it, if at all, through toJSON() as a bare display-name string with
+    // no separate matchName field) — so this is called with the
+    // (confirmed-working) displayName instead. getVideoEffectByName's
+    // public example usage passes a matchName-shaped string, but the
+    // function may just do a name lookup regardless of which kind of
+    // name it is; if not, this will surface as its own clear error here.
     var effect =
       kind === "video"
-        ? qe.project.getVideoEffectByName(matchName, true)
-        : qe.project.getAudioEffectByName(matchName, true);
+        ? qe.project.getVideoEffectByName(effectName, true)
+        : qe.project.getAudioEffectByName(effectName, true);
+
+    debug.effectLookupResult = typeof effect;
+    if (!effect) {
+      return kvnJsonStringify({
+        appliedTo: 0,
+        errors: ['getVideoEffectByName/getAudioEffectByName("' + effectName + '") returned nothing.'],
+        debug: debug,
+      });
+    }
 
     var appliedTo = 0;
     var errors = [];
