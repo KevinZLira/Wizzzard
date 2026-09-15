@@ -184,22 +184,46 @@ function kvnListEffects() {
 
     for (var i = 0; i < videoCount; i++) {
       var vEffect = videoList[i];
-      if (i === 0 && vEffect) {
+      if (!vEffect) continue;
+
+      // for-in on these QE items only surfaces "toJSON" — their real
+      // fields aren't enumerable own properties, but toJSON() serializes
+      // them into a plain object that does expose real keys.
+      var vData = vEffect;
+      if (typeof vEffect.toJSON === "function") {
+        try {
+          vData = vEffect.toJSON();
+        } catch (toJsonErr) {
+          vData = vEffect;
+        }
+      }
+
+      if (i === 0) {
         var firstKeys = [];
-        for (var k in vEffect) firstKeys.push(k);
+        for (var k in vData) firstKeys.push(k);
         debug.firstVideoItemKeys = firstKeys;
+        debug.firstVideoItemData = vData;
       }
-      if (vEffect) {
-        result.video.push({ displayName: vEffect.name, matchName: vEffect.matchName });
-      }
+
+      result.video.push({ displayName: vData.name || vData.displayName, matchName: vData.matchName });
     }
 
     if (typeof qe.project.getAudioEffectList === "function") {
       result.audioSupported = true;
       var audioList = qe.project.getAudioEffectList();
-      for (var j = 0; j < audioList.numItems; j++) {
+      var audioCount = typeof audioList.numItems === "number" ? audioList.numItems : (typeof audioList.length === "number" ? audioList.length : 0);
+      for (var j = 0; j < audioCount; j++) {
         var aEffect = audioList[j];
-        result.audio.push({ displayName: aEffect.name, matchName: aEffect.matchName });
+        if (!aEffect) continue;
+        var aData = aEffect;
+        if (typeof aEffect.toJSON === "function") {
+          try {
+            aData = aEffect.toJSON();
+          } catch (aToJsonErr) {
+            aData = aEffect;
+          }
+        }
+        result.audio.push({ displayName: aData.name || aData.displayName, matchName: aData.matchName });
       }
     }
 

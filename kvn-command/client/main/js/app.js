@@ -268,10 +268,15 @@ function renderFatalError(err) {
             return !e.displayName;
           });
           var debugInfo = catalog.getLastDebug();
-          var extra =
-            allBlank && debugInfo && debugInfo.firstVideoItemKeys
-              ? " | Real keys on a video effect item: " + debugInfo.firstVideoItemKeys.join(", ")
-              : "";
+          var extra = "";
+          if (allBlank && debugInfo) {
+            if (debugInfo.firstVideoItemKeys) {
+              extra += " | Keys: " + debugInfo.firstVideoItemKeys.join(", ");
+            }
+            if (debugInfo.firstVideoItemData) {
+              extra += " | Data: " + JSON.stringify(debugInfo.firstVideoItemData);
+            }
+          }
           resultsEl.appendChild(
             el("div", "kvn-context-banner", [
               el("strong", null, 'NO MATCH FOR "' + state.query + '"'),
