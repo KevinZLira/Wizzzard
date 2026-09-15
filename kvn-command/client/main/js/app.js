@@ -253,15 +253,34 @@ function renderFatalError(err) {
       }
 
       if (state.results.length === 0) {
-        resultsEl.appendChild(
-          el(
-            "div",
-            "kvn-empty",
-            state.query.trim()
-              ? 'No effects found for "' + state.query + '".'
-              : "Start typing to search video and audio effects."
-          )
-        );
+        if (state.query.trim() && state.rawEffects.length > 0) {
+          // Effects DID load but nothing matched — if the sample below
+          // looks empty/garbled (blank names, "null", "undefined"), the
+          // host is returning items with a different displayName
+          // property than assumed, not that the search is broken.
+          var sample = state.rawEffects
+            .slice(0, 5)
+            .map(function (e) {
+              return '"' + e.displayName + '" (' + e.kind + ")";
+            })
+            .join(", ");
+          resultsEl.appendChild(
+            el("div", "kvn-context-banner", [
+              el("strong", null, 'NO MATCH FOR "' + state.query + '"'),
+              state.rawEffects.length + " effects loaded. First few: " + sample,
+            ])
+          );
+        } else {
+          resultsEl.appendChild(
+            el(
+              "div",
+              "kvn-empty",
+              state.query.trim()
+                ? 'No effects found for "' + state.query + '".'
+                : "Start typing to search video and audio effects."
+            )
+          );
+        }
         return;
       }
 
