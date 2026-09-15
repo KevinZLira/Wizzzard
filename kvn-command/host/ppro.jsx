@@ -278,16 +278,28 @@ function kvnListEffects() {
  * same clip name/start time as the documented API to line them up,
  * rather than assuming index parity outright.
  */
-/** Reads a field off a QE host object, trying direct access, then toJSON(). */
+/**
+ * Reads a field off a QE host object, trying direct access then toJSON().
+ * Reads obj[fieldName] into a local exactly once — a nested-ternary bug
+ * found earlier turned out to be this same class of issue: re-accessing
+ * a property on these QE objects multiple times in one expression isn't
+ * reliably idempotent, so every check here is against one captured read.
+ */
 function kvnReadQeField(obj, fieldName) {
-  if (obj && typeof obj[fieldName] !== "undefined" && obj[fieldName] !== null) {
-    return obj[fieldName];
+  if (!obj) return undefined;
+
+  var direct = obj[fieldName];
+  if (typeof direct !== "undefined" && direct !== null) {
+    return direct;
   }
-  if (obj && typeof obj.toJSON === "function") {
+
+  var toJsonFn = obj.toJSON;
+  if (typeof toJsonFn === "function") {
     try {
       var data = obj.toJSON();
-      if (data && typeof data === "object" && typeof data[fieldName] !== "undefined") {
-        return data[fieldName];
+      if (data && typeof data === "object") {
+        var fromJson = data[fieldName];
+        if (typeof fromJson !== "undefined") return fromJson;
       }
     } catch (e) {
       // fall through
@@ -357,8 +369,34 @@ function kvnFindSelectedQeItems(kind, debugOut) {
       if (itemType === "Empty") continue;
 
       var startObj = kvnReadQeField(qeItem, "start");
-      var startSeconds = startObj && typeof startObj === "object" ? kvnReadQeField(startObj, "seconds") : startObj;
+      var startIsObject = startObj && typeof startObj === "object";
+      var startSeconds = startIsObject ? kvnReadQeField(startObj, "seconds") : startObj;
       trackDebug.qeItemStarts.push(String(startSeconds));
+
+      if (!debugOut.firstQeItemInfo) {
+        var itemToJsonType = "N/A";
+        var itemToJsonValue = null;
+        if (typeof qeItem.toJSON === "function") {
+          try {
+            var itemJson = qeItem.toJSON();
+            itemToJsonType = typeof itemJson;
+            itemToJsonValue = itemJson;
+          } catch (e3) {
+            itemToJsonType = "threw: " + String(e3);
+          }
+        }
+        var itemKeys = [];
+        for (var ik in qeItem) itemKeys.push(ik);
+        debugOut.firstQeItemInfo = {
+          type: itemType,
+          startRaw: String(startObj),
+          startIsObject: startIsObject,
+          startSeconds: String(startSeconds),
+          toJsonType: itemToJsonType,
+          toJsonValue: itemToJsonValue,
+          enumerableKeys: itemKeys,
+        };
+      }
 
       if (typeof startSeconds !== "undefined" && selectedStartTimes[String(startSeconds)]) {
         matches.push(qeItem);
