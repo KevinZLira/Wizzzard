@@ -443,6 +443,18 @@ window.addEventListener("unhandledrejection", function (event) {
         } else {
           var reason = result.errors[0] || "Effect could not be applied.";
           showToast(toastEl, "Could not apply: " + reason, true);
+          if (result.debug) {
+            var resultsForDebug = rootEl.querySelector(".kvn-results");
+            if (resultsForDebug) {
+              resultsForDebug.appendChild(
+                el("div", "kvn-context-banner", [
+                  el("strong", null, "APPLY DEBUG"),
+                  JSON.stringify(result.debug),
+                ])
+              );
+              scheduleResize();
+            }
+          }
         }
       } catch (err) {
         var message =

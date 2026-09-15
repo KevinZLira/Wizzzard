@@ -60,7 +60,7 @@ window.KVN.PremiereBridge = (function () {
 
     var response = await bridge.callHostJson("kvnApplyEffect", [effect.matchName, effect.kind]);
     if (!response) throw new Error("HOST_UNAVAILABLE");
-    return { appliedTo: response.appliedTo || 0, errors: response.errors || [] };
+    return { appliedTo: response.appliedTo || 0, errors: response.errors || [], debug: response.debug || null };
   }
 
   return { MediaKind: MediaKind, getSelectionContext: getSelectionContext, listHostEffects: listHostEffects, applyEffectToSelection: applyEffectToSelection };

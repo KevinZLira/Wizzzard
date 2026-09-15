@@ -267,35 +267,69 @@ function kvnListEffects() {
  * same clip name/start time as the documented API to line them up,
  * rather than assuming index parity outright.
  */
-function kvnFindSelectedQeItems(kind) {
+/** Reads a field off a QE host object, trying direct access, then toJSON(). */
+function kvnReadQeField(obj, fieldName) {
+  if (obj && typeof obj[fieldName] !== "undefined" && obj[fieldName] !== null) {
+    return obj[fieldName];
+  }
+  if (obj && typeof obj.toJSON === "function") {
+    try {
+      var data = obj.toJSON();
+      if (data && typeof data === "object" && typeof data[fieldName] !== "undefined") {
+        return data[fieldName];
+      }
+    } catch (e) {
+      // fall through
+    }
+  }
+  return undefined;
+}
+
+function kvnFindSelectedQeItems(kind, debugOut) {
   var seq = app.project.activeSequence;
   var qeSeq = qe.project.getActiveSequence();
   var matches = [];
 
   var trackCount = kind === "video" ? seq.videoTracks.numTracks : seq.audioTracks.numTracks;
+  debugOut.trackCount = trackCount;
+  debugOut.perTrack = [];
 
   for (var t = 0; t < trackCount; t++) {
     var docTrack = kind === "video" ? seq.videoTracks[t] : seq.audioTracks[t];
     var qeTrack = kind === "video" ? qeSeq.getVideoTrackAt(t) : qeSeq.getAudioTrackAt(t);
 
     var selectedStartTimes = {};
+    var selectedCount = 0;
     for (var c = 0; c < docTrack.clips.numItems; c++) {
       var clip = docTrack.clips[c];
       if (clip.isSelected()) {
         selectedStartTimes[String(clip.start.seconds)] = true;
+        selectedCount++;
       }
     }
 
-    var qeItemCount = qeTrack.numItems;
+    var qeItemCount =
+      typeof qeTrack.numItems === "number" ? qeTrack.numItems : typeof qeTrack.length === "number" ? qeTrack.length : 0;
+
+    var trackDebug = { selectedCount: selectedCount, qeItemCount: qeItemCount, qeItemStarts: [] };
+
     for (var qi = 0; qi < qeItemCount; qi++) {
       var qeItem = qeTrack.getItemAt(qi);
-      // Gaps report type "Empty"; skip them explicitly rather than
-      // guessing by name/time alone.
-      if (qeItem.type && qeItem.type === "Empty") continue;
-      if (selectedStartTimes[String(qeItem.start.seconds)]) {
+      if (!qeItem) continue;
+
+      var itemType = kvnReadQeField(qeItem, "type");
+      if (itemType === "Empty") continue;
+
+      var startObj = kvnReadQeField(qeItem, "start");
+      var startSeconds = startObj && typeof startObj === "object" ? kvnReadQeField(startObj, "seconds") : startObj;
+      trackDebug.qeItemStarts.push(String(startSeconds));
+
+      if (typeof startSeconds !== "undefined" && selectedStartTimes[String(startSeconds)]) {
         matches.push(qeItem);
       }
     }
+
+    debugOut.perTrack.push(trackDebug);
   }
 
   return matches;
@@ -316,9 +350,10 @@ function kvnApplyEffect(matchName, kind) {
       });
     }
 
-    var targets = kvnFindSelectedQeItems(kind);
+    var debug = {};
+    var targets = kvnFindSelectedQeItems(kind, debug);
     if (targets.length === 0) {
-      return kvnJsonStringify({ appliedTo: 0, errors: ["NO_MATCHING_TARGET"] });
+      return kvnJsonStringify({ appliedTo: 0, errors: ["NO_MATCHING_TARGET"], debug: debug });
     }
 
     var effect =
