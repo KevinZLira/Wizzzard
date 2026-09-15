@@ -215,6 +215,17 @@ function renderFatalError(err) {
         return;
       }
 
+      if (!isPreview && state.rawEffects.length === 0) {
+        var loadError = catalog.getLastError();
+        resultsEl.appendChild(
+          el("div", "kvn-context-banner", [
+            el("strong", null, "COULDN'T LOAD EFFECTS FROM PREMIERE"),
+            loadError || "host/ppro.jsx didn't return anything usable.",
+          ])
+        );
+        return;
+      }
+
       if (state.results.length === 0) {
         resultsEl.appendChild(
           el(

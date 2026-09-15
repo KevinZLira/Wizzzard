@@ -18,6 +18,7 @@ window.KVN.EffectsCatalog = (function () {
 
   var cachedRawEffects = null; // host round-trip result, cached for the panel session
   var lastAudioSupported = false;
+  var lastError = null;
 
   function effectId(hostEffect) {
     return hostEffect.kind + ":" + hostEffect.matchName;
@@ -29,6 +30,7 @@ window.KVN.EffectsCatalog = (function () {
 
     var result = await bridge.listHostEffects();
     lastAudioSupported = result.audioSupported;
+    lastError = result.effects.length === 0 ? result.error || null : null;
     cachedRawEffects = result.effects.map(function (e) {
       return {
         displayName: e.displayName,
@@ -43,6 +45,10 @@ window.KVN.EffectsCatalog = (function () {
 
   function isAudioSupported() {
     return lastAudioSupported;
+  }
+
+  function getLastError() {
+    return lastError;
   }
 
   /**
@@ -87,5 +93,11 @@ window.KVN.EffectsCatalog = (function () {
       });
   }
 
-  return { loadRawEffects: loadRawEffects, buildSearchPool: buildSearchPool, effectId: effectId, isAudioSupported: isAudioSupported };
+  return {
+    loadRawEffects: loadRawEffects,
+    buildSearchPool: buildSearchPool,
+    effectId: effectId,
+    isAudioSupported: isAudioSupported,
+    getLastError: getLastError,
+  };
 })();

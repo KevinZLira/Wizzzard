@@ -26,7 +26,13 @@ window.KVN.PremiereBridge = (function () {
 
   async function listHostEffects() {
     var response = await bridge.callHostJson("kvnListEffects", []);
-    if (!response) return { effects: [], audioSupported: false };
+    if (!response) {
+      return {
+        effects: [],
+        audioSupported: false,
+        error: bridge.lastError || "No response from host (evalScript returned nothing parseable).",
+      };
+    }
 
     var effects = [];
     (response.video || []).forEach(function (e) {
@@ -36,7 +42,7 @@ window.KVN.PremiereBridge = (function () {
       effects.push({ displayName: e.displayName, matchName: e.matchName, kind: MediaKind.AUDIO });
     });
 
-    return { effects: effects, audioSupported: !!response.audioSupported };
+    return { effects: effects, audioSupported: !!response.audioSupported, error: response.error || null };
   }
 
   async function applyEffectToSelection(effect, context) {

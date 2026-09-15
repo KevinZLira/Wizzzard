@@ -15,10 +15,13 @@
 window.KVN = window.KVN || {};
 
 window.KVN.HostBridge = (function () {
+  var lastError = null;
+
   function evalScript(script) {
     return new Promise(function (resolve) {
       if (!window.__adobe_cep__) {
-        resolve(null); // not running inside a CEP host (e.g. static preview)
+        lastError = "window.__adobe_cep__ is undefined — not running inside a CEP host.";
+        resolve(null);
         return;
       }
       window.__adobe_cep__.evalScript(script, function (result) {
@@ -38,10 +41,21 @@ window.KVN.HostBridge = (function () {
     try {
       return JSON.parse(raw);
     } catch (err) {
+      // A common real cause: host/ppro.jsx's ScriptPath didn't load (bad
+      // manifest path, or the host caching a stale copy), so evalScript
+      // ran the JS engine's default error string instead of our function
+      // — "EvalScript error." or similar, not JSON.
+      lastError = 'Host returned non-JSON for "' + fnName + '": ' + JSON.stringify(raw);
       console.error("[KVN Command] Failed to parse host response for", fnName, ":", raw, err);
       return null;
     }
   }
 
-  return { evalScript: evalScript, callHostJson: callHostJson };
+  return {
+    evalScript: evalScript,
+    callHostJson: callHostJson,
+    get lastError() {
+      return lastError;
+    },
+  };
 })();
