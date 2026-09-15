@@ -186,26 +186,53 @@ function kvnListEffects() {
       var vEffect = videoList[i];
       if (!vEffect) continue;
 
-      // for-in on these QE items only surfaces "toJSON" — their real
-      // fields aren't enumerable own properties, but toJSON() serializes
-      // them into a plain object that does expose real keys.
-      var vData = vEffect;
+      // toJSON() turned out to return the (localized!) display name as a
+      // bare string, not an object — confirmed on a live PT-BR Premiere,
+      // where it returned "Substituição de cor" for one item. So the
+      // items ARE real, .name/.matchName direct access just isn't it.
+      var vDisplayName = null;
       if (typeof vEffect.toJSON === "function") {
         try {
-          vData = vEffect.toJSON();
+          var vJson = vEffect.toJSON();
+          vDisplayName = typeof vJson === "string" ? vJson : vJson && (vJson.name || vJson.displayName);
         } catch (toJsonErr) {
-          vData = vEffect;
+          // ignore, vDisplayName stays null
+        }
+      }
+      if (!vDisplayName && typeof vEffect.name === "string") vDisplayName = vEffect.name;
+      if (!vDisplayName && typeof vEffect.toString === "function") {
+        var asString = vEffect.toString();
+        if (asString && asString.indexOf("[object") !== 0) vDisplayName = asString;
+      }
+
+      // matchName still isn't confirmed — toJSON only gave us the name.
+      // Try direct access, then fall back to reflect() introspection so
+      // this is diagnosable instead of guessed at again.
+      var vMatchName = typeof vEffect.matchName === "string" ? vEffect.matchName : null;
+
+      if (i === 0) {
+        debug.firstVideoItemToJsonType = typeof (vEffect.toJSON && vEffect.toJSON());
+        debug.firstVideoItemDisplayName = vDisplayName;
+        debug.firstVideoItemMatchName = vMatchName;
+        if (vEffect.reflect) {
+          var vReflectProps = [];
+          if (vEffect.reflect.properties) {
+            for (var vrp = 0; vrp < vEffect.reflect.properties.length; vrp++) {
+              vReflectProps.push(String(vEffect.reflect.properties[vrp]));
+            }
+          }
+          var vReflectMethods = [];
+          if (vEffect.reflect.methods) {
+            for (var vrm = 0; vrm < vEffect.reflect.methods.length; vrm++) {
+              vReflectMethods.push(String(vEffect.reflect.methods[vrm]));
+            }
+          }
+          debug.firstVideoItemReflectProperties = vReflectProps;
+          debug.firstVideoItemReflectMethods = vReflectMethods;
         }
       }
 
-      if (i === 0) {
-        var firstKeys = [];
-        for (var k in vData) firstKeys.push(k);
-        debug.firstVideoItemKeys = firstKeys;
-        debug.firstVideoItemData = vData;
-      }
-
-      result.video.push({ displayName: vData.name || vData.displayName, matchName: vData.matchName });
+      result.video.push({ displayName: vDisplayName, matchName: vMatchName });
     }
 
     if (typeof qe.project.getAudioEffectList === "function") {

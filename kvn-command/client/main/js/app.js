@@ -264,17 +264,24 @@ function renderFatalError(err) {
               return '"' + e.displayName + '" (' + e.kind + ", matchName=" + e.matchName + ")";
             })
             .join(", ");
-          var allBlank = state.rawEffects.slice(0, 5).every(function (e) {
+          var allNameBlank = state.rawEffects.slice(0, 5).every(function (e) {
             return !e.displayName;
+          });
+          var allMatchBlank = state.rawEffects.slice(0, 5).every(function (e) {
+            return !e.matchName;
           });
           var debugInfo = catalog.getLastDebug();
           var extra = "";
-          if (allBlank && debugInfo) {
-            if (debugInfo.firstVideoItemKeys) {
-              extra += " | Keys: " + debugInfo.firstVideoItemKeys.join(", ");
+          if (allNameBlank && debugInfo) {
+            if (debugInfo.firstVideoItemKeys) extra += " | Keys: " + debugInfo.firstVideoItemKeys.join(", ");
+            if (debugInfo.firstVideoItemData) extra += " | Data: " + JSON.stringify(debugInfo.firstVideoItemData);
+          }
+          if (allMatchBlank && debugInfo) {
+            if (debugInfo.firstVideoItemReflectProperties) {
+              extra += " | Reflect props: " + debugInfo.firstVideoItemReflectProperties.join(", ");
             }
-            if (debugInfo.firstVideoItemData) {
-              extra += " | Data: " + JSON.stringify(debugInfo.firstVideoItemData);
+            if (debugInfo.firstVideoItemReflectMethods) {
+              extra += " | Reflect methods: " + debugInfo.firstVideoItemReflectMethods.join(", ");
             }
           }
           resultsEl.appendChild(
