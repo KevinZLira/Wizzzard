@@ -36,18 +36,24 @@
                 <UI>
                     <Type>Custom</Type>
                     <Menu>KVN Command</Menu>
+                    <!-- Starts as just the search row — Spotlight-style —
+                         and grows via resizeContent() as results appear.
+                         resizeContent() is confirmed supported for
+                         Custom/modeless CEP windows in Premiere Pro (the
+                         restriction that applies is specific to the
+                         "Panel" UI type, not this one). -->
                     <Geometry>
                         <Size>
-                            <Width>420</Width>
-                            <Height>520</Height>
+                            <Width>520</Width>
+                            <Height>56</Height>
                         </Size>
                         <MinSize>
-                            <Width>360</Width>
-                            <Height>420</Height>
+                            <Width>420</Width>
+                            <Height>56</Height>
                         </MinSize>
                         <MaxSize>
                             <Width>640</Width>
-                            <Height>900</Height>
+                            <Height>560</Height>
                         </MaxSize>
                     </Geometry>
                     <Icons>

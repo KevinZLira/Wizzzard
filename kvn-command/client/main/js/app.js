@@ -46,6 +46,27 @@ function renderFatalError(err) {
 
     var rootEl = null;
 
+    var WINDOW_WIDTH = 520;
+    var MIN_HEIGHT = 56;
+    var MAX_HEIGHT = 560;
+
+    /**
+     * Spotlight-style: the window starts as just the search row and grows
+     * to fit content as results/settings appear, via CEP's
+     * resizeContent() — confirmed supported for Custom/modeless windows
+     * in Premiere Pro (the "not supported" restriction documented in
+     * Adobe's CEP cookbook is specific to the "Panel" UI type, not this
+     * one). No-ops outside a CEP host (e.g. static preview).
+     */
+    function scheduleResize() {
+      if (!window.__adobe_cep__ || typeof window.__adobe_cep__.resizeContent !== "function") return;
+      requestAnimationFrame(function () {
+        var measured = document.body.scrollHeight;
+        var height = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, measured));
+        window.__adobe_cep__.resizeContent(WINDOW_WIDTH, height);
+      });
+    }
+
     function groupByCategory(results) {
       var groups = [];
       var index = {};
@@ -171,13 +192,6 @@ function renderFatalError(err) {
       renderResultsInto(resultsEl);
       palette.appendChild(resultsEl);
 
-      var footer = el("div", "kvn-footer", [
-        el("span", null, [el("kbd", null, "↑"), el("kbd", null, "↓"), " navigate"]),
-        el("span", null, [el("kbd", null, "↵"), " apply"]),
-        el("span", null, [el("kbd", null, "esc"), " clear"]),
-      ]);
-      palette.appendChild(footer);
-
       var toast = el("div", "kvn-toast");
       palette.appendChild(toast);
 
@@ -199,9 +213,21 @@ function renderFatalError(err) {
     }
 
     function renderResultsInto(resultsEl) {
+      try {
+        renderResultsIntoBody(resultsEl);
+      } finally {
+        scheduleResize();
+      }
+    }
+
+    function renderResultsIntoBody(resultsEl) {
       resultsEl.innerHTML = "";
 
-      if (!isPreview && state.context.count === 0) {
+      // No target selected is already communicated by the badge in the
+      // search row — an idle query with no results shouldn't grow the
+      // window with a redundant banner (keeps the at-rest state a single
+      // line, Spotlight-style).
+      if (!isPreview && state.context.count === 0 && state.query.trim() !== "") {
         resultsEl.appendChild(
           el("div", "kvn-context-banner", [
             el("strong", null, "NO TARGET SELECTED"),
@@ -508,12 +534,15 @@ function renderFatalError(err) {
         rootEl.innerHTML = "";
         if (state.view === "settings") {
           renderSettings(rootEl);
+          scheduleResize();
         } else if (state.view === "manage-favorites") {
           renderManageList(rootEl, "favorites");
+          scheduleResize();
         } else if (state.view === "manage-hidden") {
           renderManageList(rootEl, "hidden");
+          scheduleResize();
         } else {
-          renderPalette(rootEl);
+          renderPalette(rootEl); // schedules its own resize via renderResultsInto
         }
       } catch (err) {
         renderFatalError(err);
