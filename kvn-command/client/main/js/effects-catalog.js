@@ -30,7 +30,11 @@ window.KVN.EffectsCatalog = (function () {
 
     var result = await bridge.listHostEffects();
     lastAudioSupported = result.audioSupported;
-    lastError = result.effects.length === 0 ? result.error || null : null;
+    if (result.effects.length === 0) {
+      lastError = result.error || (result.debug ? "Host reported zero effects. debug: " + JSON.stringify(result.debug) : null);
+    } else {
+      lastError = null;
+    }
     cachedRawEffects = result.effects.map(function (e) {
       return {
         displayName: e.displayName,

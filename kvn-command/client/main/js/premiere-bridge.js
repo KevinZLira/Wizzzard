@@ -42,7 +42,12 @@ window.KVN.PremiereBridge = (function () {
       effects.push({ displayName: e.displayName, matchName: e.matchName, kind: MediaKind.AUDIO });
     });
 
-    return { effects: effects, audioSupported: !!response.audioSupported, error: response.error || null };
+    return {
+      effects: effects,
+      audioSupported: !!response.audioSupported,
+      error: response.error || null,
+      debug: response.debug || null,
+    };
   }
 
   async function applyEffectToSelection(effect, context) {

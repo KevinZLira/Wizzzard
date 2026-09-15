@@ -121,16 +121,36 @@ function kvnGetContext() {
   }
 }
 
-/** Whatever the host currently reports as installed video/audio filters. */
+/**
+ * Whatever the host currently reports as installed video/audio filters.
+ * Always includes a `debug` block (qe availability, raw item counts,
+ * property names actually seen on the first item) so a zero-effects
+ * result — which isn't an exception, so the normal `error` field stays
+ * empty — is still diagnosable from the panel without another round trip.
+ */
 function kvnListEffects() {
+  var debug = { qeDefinedBefore: typeof qe !== "undefined" };
   try {
     kvnEnsureQE();
-    var result = { video: [], audio: [], audioSupported: false };
+    debug.qeDefinedAfterEnable = typeof qe !== "undefined";
+    debug.qeProjectDefined = debug.qeDefinedAfterEnable && typeof qe.project !== "undefined";
+
+    var result = { video: [], audio: [], audioSupported: false, debug: debug };
 
     var videoList = qe.project.getVideoEffectList();
-    for (var i = 0; i < videoList.numItems; i++) {
-      var vEffect = videoList[i];
-      result.video.push({ displayName: vEffect.name, matchName: vEffect.matchName });
+    debug.videoListType = typeof videoList;
+    debug.videoNumItems = videoList && typeof videoList.numItems !== "undefined" ? videoList.numItems : "no .numItems property";
+
+    if (videoList && typeof videoList.numItems === "number") {
+      for (var i = 0; i < videoList.numItems; i++) {
+        var vEffect = videoList[i];
+        if (i === 0) {
+          var firstKeys = [];
+          for (var k in vEffect) firstKeys.push(k);
+          debug.firstVideoItemKeys = firstKeys;
+        }
+        result.video.push({ displayName: vEffect.name, matchName: vEffect.matchName });
+      }
     }
 
     if (typeof qe.project.getAudioEffectList === "function") {
@@ -144,7 +164,7 @@ function kvnListEffects() {
 
     return kvnJsonStringify(result);
   } catch (err) {
-    return kvnJsonStringify({ video: [], audio: [], audioSupported: false, error: String(err) });
+    return kvnJsonStringify({ video: [], audio: [], audioSupported: false, error: String(err), debug: debug });
   }
 }
 
