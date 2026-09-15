@@ -368,8 +368,18 @@ window.addEventListener("unhandledrejection", function (event) {
           row.appendChild(star);
 
           row.addEventListener("mouseenter", function () {
+            // Only swap the active class/indicator on the two affected
+            // rows — a full renderResultsInto() rebuild here used to
+            // replace every row's DOM node on every hover, including the
+            // one the cursor was over. If that swap landed between a
+            // click's mousedown and mouseup, the browser doesn't fire a
+            // "click" at all (it requires the same element for both) —
+            // that was the real cause of "clicking a result does
+            // nothing" even though Enter (no mouse involved) worked.
+            var prevActive = resultsEl.querySelector(".kvn-item.kvn-active");
+            if (prevActive && prevActive !== row) prevActive.classList.remove("kvn-active");
+            row.classList.add("kvn-active");
             state.activeIndex = thisIndex;
-            renderResultsInto(resultsEl);
           });
           row.addEventListener("click", function () {
             applyActive();
