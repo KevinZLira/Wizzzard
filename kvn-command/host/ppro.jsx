@@ -175,12 +175,16 @@ function kvnListEffects() {
       }
     }
 
-    var videoCount =
-      typeof videoList.numItems === "number"
-        ? videoList.numItems
-        : typeof videoList.length === "number"
-        ? videoList.length
-        : 0;
+    // Single read each, not re-accessed inside the check — see the note
+    // by the same pattern in kvnFindSelectedQeItems.
+    var videoRawNumItems = videoList.numItems;
+    var videoRawLength = videoList.length;
+    var videoCount = 0;
+    if (typeof videoRawNumItems === "number") {
+      videoCount = videoRawNumItems;
+    } else if (typeof videoRawLength === "number") {
+      videoCount = videoRawLength;
+    }
 
     for (var i = 0; i < videoCount; i++) {
       var vEffect = videoList[i];
@@ -238,7 +242,14 @@ function kvnListEffects() {
     if (typeof qe.project.getAudioEffectList === "function") {
       result.audioSupported = true;
       var audioList = qe.project.getAudioEffectList();
-      var audioCount = typeof audioList.numItems === "number" ? audioList.numItems : (typeof audioList.length === "number" ? audioList.length : 0);
+      var audioRawNumItems = audioList.numItems;
+      var audioRawLength = audioList.length;
+      var audioCount = 0;
+      if (typeof audioRawNumItems === "number") {
+        audioCount = audioRawNumItems;
+      } else if (typeof audioRawLength === "number") {
+        audioCount = audioRawLength;
+      }
       for (var j = 0; j < audioCount; j++) {
         var aEffect = audioList[j];
         if (!aEffect) continue;
@@ -308,8 +319,22 @@ function kvnFindSelectedQeItems(kind, debugOut) {
       }
     }
 
-    var qeItemCount =
-      typeof qeTrack.numItems === "number" ? qeTrack.numItems : typeof qeTrack.length === "number" ? qeTrack.length : 0;
+    // Read numItems/length exactly once each rather than re-accessing the
+    // property inside a ternary — a prior debug round showed a nested-
+    // ternary version of this exact check landing on null even though a
+    // typeof check on the very same property, read again moments later,
+    // correctly reported "number". These QE host objects have already
+    // shown non-standard behavior (toJSON-only serialization, no
+    // enumerable properties); repeated reads not being safely idempotent
+    // is exactly the kind of thing that would explain it, so avoid it.
+    var rawNumItems = qeTrack.numItems;
+    var rawLength = qeTrack.length;
+    var qeItemCount = 0;
+    if (typeof rawNumItems === "number") {
+      qeItemCount = rawNumItems;
+    } else if (typeof rawLength === "number") {
+      qeItemCount = rawLength;
+    }
 
     var trackDebug = {
       selectedCount: selectedCount,
@@ -318,10 +343,10 @@ function kvnFindSelectedQeItems(kind, debugOut) {
       qeTrackType: typeof qeTrack,
       qeTrackIsNull: qeTrack === null,
       qeTrackIsUndefined: typeof qeTrack === "undefined",
-      qeTrackNumItemsRaw: String(qeTrack ? qeTrack.numItems : "N/A (qeTrack falsy)"),
-      qeTrackNumItemsType: typeof (qeTrack && qeTrack.numItems),
-      qeTrackLengthRaw: String(qeTrack ? qeTrack.length : "N/A (qeTrack falsy)"),
-      qeTrackLengthType: typeof (qeTrack && qeTrack.length),
+      qeTrackNumItemsRaw: String(rawNumItems),
+      qeTrackNumItemsType: typeof rawNumItems,
+      qeTrackLengthRaw: String(rawLength),
+      qeTrackLengthType: typeof rawLength,
     };
 
     for (var qi = 0; qi < qeItemCount; qi++) {
