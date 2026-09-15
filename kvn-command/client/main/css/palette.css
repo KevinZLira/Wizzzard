@@ -41,6 +41,10 @@ body {
 .kvn-palette {
   display: flex;
   flex-direction: column;
+  position: relative; /* anchors .kvn-toast's position:absolute — without
+    this it positions against the document root instead of the visible
+    palette, which (especially now that the window is small and content-
+    sized) can put it outside the visible window entirely. */
   background: var(--kvn-bg);
   opacity: 0;
   transform: translateY(-4px);

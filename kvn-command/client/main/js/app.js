@@ -378,11 +378,17 @@ function renderFatalError(err) {
         if (result.appliedTo > 0) {
           state.userState = store.pushRecent(state.userState, effect.id);
           showToast(toastEl, "Applied " + effect.displayName, false);
-          state.query = "";
-          if (input) input.value = "";
-          computeResults();
-          renderResultsInto(rootEl.querySelector(".kvn-results"));
-          if (input) input.focus();
+          // Wait for the toast to actually be seen before clearing the
+          // query — clearing immediately shrinks the window (see
+          // scheduleResize()) out from under a toast that's positioned
+          // relative to the now-gone results area.
+          setTimeout(function () {
+            state.query = "";
+            if (input) input.value = "";
+            computeResults();
+            renderResultsInto(rootEl.querySelector(".kvn-results"));
+            if (input) input.focus();
+          }, 900);
         } else {
           var reason = result.errors[0] || "Effect could not be applied.";
           showToast(toastEl, "Could not apply: " + reason, true);
