@@ -261,13 +261,21 @@ function renderFatalError(err) {
           var sample = state.rawEffects
             .slice(0, 5)
             .map(function (e) {
-              return '"' + e.displayName + '" (' + e.kind + ")";
+              return '"' + e.displayName + '" (' + e.kind + ", matchName=" + e.matchName + ")";
             })
             .join(", ");
+          var allBlank = state.rawEffects.slice(0, 5).every(function (e) {
+            return !e.displayName;
+          });
+          var debugInfo = catalog.getLastDebug();
+          var extra =
+            allBlank && debugInfo && debugInfo.firstVideoItemKeys
+              ? " | Real keys on a video effect item: " + debugInfo.firstVideoItemKeys.join(", ")
+              : "";
           resultsEl.appendChild(
             el("div", "kvn-context-banner", [
               el("strong", null, 'NO MATCH FOR "' + state.query + '"'),
-              state.rawEffects.length + " effects loaded. First few: " + sample,
+              state.rawEffects.length + " effects loaded. First few: " + sample + extra,
             ])
           );
         } else {

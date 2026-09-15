@@ -19,6 +19,7 @@ window.KVN.EffectsCatalog = (function () {
   var cachedRawEffects = null; // host round-trip result, cached for the panel session
   var lastAudioSupported = false;
   var lastError = null;
+  var lastDebug = null; // kept even on a "successful" load — useful when items load but with bad/empty fields
 
   function effectId(hostEffect) {
     return hostEffect.kind + ":" + hostEffect.matchName;
@@ -30,6 +31,7 @@ window.KVN.EffectsCatalog = (function () {
 
     var result = await bridge.listHostEffects();
     lastAudioSupported = result.audioSupported;
+    lastDebug = result.debug || null;
     if (result.effects.length === 0) {
       lastError = result.error || (result.debug ? "Host reported zero effects. debug: " + JSON.stringify(result.debug) : null);
     } else {
@@ -53,6 +55,10 @@ window.KVN.EffectsCatalog = (function () {
 
   function getLastError() {
     return lastError;
+  }
+
+  function getLastDebug() {
+    return lastDebug;
   }
 
   /**
@@ -103,5 +109,6 @@ window.KVN.EffectsCatalog = (function () {
     effectId: effectId,
     isAudioSupported: isAudioSupported,
     getLastError: getLastError,
+    getLastDebug: getLastDebug,
   };
 })();
