@@ -321,24 +321,20 @@ function kvnFindSelectedQeItems(kind, debugOut) {
     var docTrack = kind === "video" ? seq.videoTracks[t] : seq.audioTracks[t];
     var qeTrack = kind === "video" ? qeSeq.getVideoTrackAt(t) : qeSeq.getAudioTrackAt(t);
 
-    var selectedStartTimes = {};
-    var selectedCount = 0;
+    // docTrack.clips (the documented, non-QE DOM) lists ONLY real clips —
+    // it has no concept of a "gap" the way QE's getItemAt() does. So
+    // instead of matching QE items to documented clips by any field
+    // value (time units turned out to differ between the two DOMs' time
+    // objects — QE's "start" is a "QETime", not the documented TickTime,
+    // and no confirmed shared unit was found), filter QE's gaps out and
+    // correlate purely by ordinal position: the Nth real clip on a track
+    // should be the Nth non-"Empty" QE item on that same track, since
+    // both simply list the same real clips left-to-right.
+    var selectedDocIndexes = [];
     for (var c = 0; c < docTrack.clips.numItems; c++) {
-      var clip = docTrack.clips[c];
-      if (clip.isSelected()) {
-        selectedStartTimes[String(clip.start.seconds)] = true;
-        selectedCount++;
-      }
+      if (docTrack.clips[c].isSelected()) selectedDocIndexes.push(c);
     }
 
-    // Read numItems/length exactly once each rather than re-accessing the
-    // property inside a ternary — a prior debug round showed a nested-
-    // ternary version of this exact check landing on null even though a
-    // typeof check on the very same property, read again moments later,
-    // correctly reported "number". These QE host objects have already
-    // shown non-standard behavior (toJSON-only serialization, no
-    // enumerable properties); repeated reads not being safely idempotent
-    // is exactly the kind of thing that would explain it, so avoid it.
     var rawNumItems = qeTrack.numItems;
     var rawLength = qeTrack.length;
     var qeItemCount = 0;
@@ -348,62 +344,28 @@ function kvnFindSelectedQeItems(kind, debugOut) {
       qeItemCount = rawLength;
     }
 
-    var trackDebug = {
-      selectedCount: selectedCount,
-      qeItemCount: qeItemCount,
-      qeItemStarts: [],
-      qeTrackType: typeof qeTrack,
-      qeTrackIsNull: qeTrack === null,
-      qeTrackIsUndefined: typeof qeTrack === "undefined",
-      qeTrackNumItemsRaw: String(rawNumItems),
-      qeTrackNumItemsType: typeof rawNumItems,
-      qeTrackLengthRaw: String(rawLength),
-      qeTrackLengthType: typeof rawLength,
-    };
-
+    var qeNonEmptyItems = [];
     for (var qi = 0; qi < qeItemCount; qi++) {
       var qeItem = qeTrack.getItemAt(qi);
       if (!qeItem) continue;
-
       var itemType = kvnReadQeField(qeItem, "type");
       if (itemType === "Empty") continue;
-
-      var startObj = kvnReadQeField(qeItem, "start");
-      var startIsObject = startObj && typeof startObj === "object";
-      var startSeconds = startIsObject ? kvnReadQeField(startObj, "seconds") : startObj;
-      trackDebug.qeItemStarts.push(String(startSeconds));
-
-      if (!debugOut.firstQeItemInfo) {
-        var itemToJsonType = "N/A";
-        var itemToJsonValue = null;
-        if (typeof qeItem.toJSON === "function") {
-          try {
-            var itemJson = qeItem.toJSON();
-            itemToJsonType = typeof itemJson;
-            itemToJsonValue = itemJson;
-          } catch (e3) {
-            itemToJsonType = "threw: " + String(e3);
-          }
-        }
-        var itemKeys = [];
-        for (var ik in qeItem) itemKeys.push(ik);
-        debugOut.firstQeItemInfo = {
-          type: itemType,
-          startRaw: String(startObj),
-          startIsObject: startIsObject,
-          startSeconds: String(startSeconds),
-          toJsonType: itemToJsonType,
-          toJsonValue: itemToJsonValue,
-          enumerableKeys: itemKeys,
-        };
-      }
-
-      if (typeof startSeconds !== "undefined" && selectedStartTimes[String(startSeconds)]) {
-        matches.push(qeItem);
-      }
+      qeNonEmptyItems.push(qeItem);
     }
 
-    debugOut.perTrack.push(trackDebug);
+    debugOut.perTrack.push({
+      docClipCount: docTrack.clips.numItems,
+      selectedDocIndexes: selectedDocIndexes,
+      qeItemCount: qeItemCount,
+      qeNonEmptyCount: qeNonEmptyItems.length,
+    });
+
+    for (var si = 0; si < selectedDocIndexes.length; si++) {
+      var docIndex = selectedDocIndexes[si];
+      if (qeNonEmptyItems[docIndex]) {
+        matches.push(qeNonEmptyItems[docIndex]);
+      }
+    }
   }
 
   return matches;
