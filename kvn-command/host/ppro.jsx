@@ -311,7 +311,18 @@ function kvnFindSelectedQeItems(kind, debugOut) {
     var qeItemCount =
       typeof qeTrack.numItems === "number" ? qeTrack.numItems : typeof qeTrack.length === "number" ? qeTrack.length : 0;
 
-    var trackDebug = { selectedCount: selectedCount, qeItemCount: qeItemCount, qeItemStarts: [] };
+    var trackDebug = {
+      selectedCount: selectedCount,
+      qeItemCount: qeItemCount,
+      qeItemStarts: [],
+      qeTrackType: typeof qeTrack,
+      qeTrackIsNull: qeTrack === null,
+      qeTrackIsUndefined: typeof qeTrack === "undefined",
+      qeTrackNumItemsRaw: String(qeTrack ? qeTrack.numItems : "N/A (qeTrack falsy)"),
+      qeTrackNumItemsType: typeof (qeTrack && qeTrack.numItems),
+      qeTrackLengthRaw: String(qeTrack ? qeTrack.length : "N/A (qeTrack falsy)"),
+      qeTrackLengthType: typeof (qeTrack && qeTrack.length),
+    };
 
     for (var qi = 0; qi < qeItemCount; qi++) {
       var qeItem = qeTrack.getItemAt(qi);
