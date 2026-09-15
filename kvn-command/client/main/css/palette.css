@@ -138,6 +138,10 @@ body {
   color: var(--kvn-text-dim);
   font-size: 12px;
   line-height: 1.5;
+  /* Debug JSON dumped here can be one long comma-separated run with no
+     spaces to break on — without this it silently overflows the fixed-
+     width window instead of wrapping. */
+  overflow-wrap: anywhere;
 }
 
 .kvn-context-banner strong {

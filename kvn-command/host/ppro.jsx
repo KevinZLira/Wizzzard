@@ -141,14 +141,55 @@ function kvnListEffects() {
     debug.videoListType = typeof videoList;
     debug.videoNumItems = videoList && typeof videoList.numItems !== "undefined" ? videoList.numItems : "no .numItems property";
 
-    if (videoList && typeof videoList.numItems === "number") {
-      for (var i = 0; i < videoList.numItems; i++) {
-        var vEffect = videoList[i];
-        if (i === 0) {
-          var firstKeys = [];
-          for (var k in vEffect) firstKeys.push(k);
-          debug.firstVideoItemKeys = firstKeys;
+    // .numItems wasn't there on a real host — dump everything we can see
+    // on the returned object instead of guessing at another property name.
+    if (videoList) {
+      var videoListKeys = [];
+      for (var vk in videoList) videoListKeys.push(vk);
+      debug.videoListKeys = videoListKeys;
+
+      if (videoList.reflect) {
+        var reflectProps = [];
+        if (videoList.reflect.properties) {
+          for (var rp = 0; rp < videoList.reflect.properties.length; rp++) {
+            reflectProps.push(String(videoList.reflect.properties[rp]));
+          }
         }
+        var reflectMethods = [];
+        if (videoList.reflect.methods) {
+          for (var rm = 0; rm < videoList.reflect.methods.length; rm++) {
+            reflectMethods.push(String(videoList.reflect.methods[rm]));
+          }
+        }
+        debug.videoListReflectProperties = reflectProps;
+        debug.videoListReflectMethods = reflectMethods;
+      }
+
+      // Common alternates seen across different QE DOM builds/versions.
+      var altCountKeys = ["length", "numEffects", "count"];
+      for (var ak = 0; ak < altCountKeys.length; ak++) {
+        var key = altCountKeys[ak];
+        if (typeof videoList[key] !== "undefined") {
+          debug["alt_" + key] = videoList[key];
+        }
+      }
+    }
+
+    var videoCount =
+      typeof videoList.numItems === "number"
+        ? videoList.numItems
+        : typeof videoList.length === "number"
+        ? videoList.length
+        : 0;
+
+    for (var i = 0; i < videoCount; i++) {
+      var vEffect = videoList[i];
+      if (i === 0 && vEffect) {
+        var firstKeys = [];
+        for (var k in vEffect) firstKeys.push(k);
+        debug.firstVideoItemKeys = firstKeys;
+      }
+      if (vEffect) {
         result.video.push({ displayName: vEffect.name, matchName: vEffect.matchName });
       }
     }
