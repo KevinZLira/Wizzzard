@@ -486,7 +486,8 @@ function kvnApplyEffect(effectName, kind) {
       verifyInfo.push({ before: beforeCount, after: afterCount });
     }
 
-    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors, debug: { verify: verifyInfo } });
+    debug.verify = verifyInfo;
+    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors, debug: debug });
   } catch (err) {
     return kvnJsonStringify({ appliedTo: 0, errors: [String(err)] });
   }
