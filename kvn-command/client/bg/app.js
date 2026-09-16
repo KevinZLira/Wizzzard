@@ -66,7 +66,7 @@ function initGlobalHotkey() {
     uiohook = require("./native/uiohook-loader.js");
   } catch (err) {
     console.error("[KVN Command BG] Failed to load uiohook-loader:", err);
-    setHotkeyStatus("Global shortcut unavailable (loader error).", true);
+    setHotkeyStatus("Loader error: " + (err && err.message ? err.message : String(err)), true);
     return;
   }
 
@@ -106,7 +106,7 @@ function initGlobalHotkey() {
     setHotkeyStatus("Global shortcut active (Ctrl+Cmd/Win+K).", false);
   } catch (err) {
     console.error("[KVN Command BG] Failed to start uiohook:", err);
-    setHotkeyStatus("Global shortcut failed to start.", true);
+    setHotkeyStatus("Start error: " + (err && err.message ? err.message : String(err)), true);
   }
 }
 
@@ -141,6 +141,22 @@ var server = http.createServer(function (req, res) {
   if (req.url === "/status") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end(lastHotkeyStatus);
+    return;
+  }
+
+  // Diagnostic: how does this CEP mixed-context Node engine actually
+  // resolve module paths for a script loaded via <script src>? A prior
+  // bug in the (since-abandoned) UXP build turned out to be exactly this
+  // kind of relative-path resolution surprise, so don't guess here.
+  if (req.url === "/debug-paths") {
+    var info = {
+      __dirname: typeof __dirname !== "undefined" ? __dirname : "(undefined)",
+      __filename: typeof __filename !== "undefined" ? __filename : "(undefined)",
+      cwd: process.cwd(),
+      locationHref: typeof window !== "undefined" && window.location ? window.location.href : "(no window.location)",
+    };
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(info, null, 2));
     return;
   }
 
