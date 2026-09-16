@@ -455,7 +455,7 @@ function kvnApplyEffect(effectName, kind) {
  * "1 second" in real time. Good enough for a first version; refine once
  * this is confirmed working at all.
  */
-function kvnListTransitionsOfList(list) {
+function kvnListTransitionsOfList(list, debugOut, debugPrefix) {
   var names = [];
   var rawNumItems = list.numItems;
   var rawLength = list.length;
@@ -466,45 +466,71 @@ function kvnListTransitionsOfList(list) {
     count = rawLength;
   }
 
+  if (debugOut) {
+    debugOut[debugPrefix + "ListType"] = typeof list;
+    debugOut[debugPrefix + "RawNumItems"] = String(rawNumItems);
+    debugOut[debugPrefix + "RawLength"] = String(rawLength);
+    debugOut[debugPrefix + "Count"] = count;
+  }
+
   for (var i = 0; i < count; i++) {
     var item = list[i];
     if (!item) continue;
     var name = null;
+    var toJsonType = "N/A";
     if (typeof item.toJSON === "function") {
       try {
         var data = item.toJSON();
+        toJsonType = typeof data;
         name = typeof data === "string" ? data : data && (data.name || data.displayName);
       } catch (e) {
-        // fall through
+        toJsonType = "threw: " + String(e);
       }
     }
     if (!name && typeof item.name === "string") name = item.name;
+
+    if (debugOut && i === 0) {
+      var itemKeys = [];
+      for (var k in item) itemKeys.push(k);
+      debugOut[debugPrefix + "FirstItemKeys"] = itemKeys;
+      debugOut[debugPrefix + "FirstItemToJsonType"] = toJsonType;
+      debugOut[debugPrefix + "FirstItemResolvedName"] = name;
+    }
+
     if (name) names.push(name);
   }
   return names;
 }
 
 function kvnListTransitions() {
+  var debug = { getVideoTransitionListExists: typeof (qe && qe.project && qe.project.getVideoTransitionList) };
   try {
     kvnEnsureQE();
-    var result = { video: [], audio: [], audioSupported: false };
+    debug.qeDefined = typeof qe !== "undefined";
+    debug.getVideoTransitionListExists = typeof qe.project.getVideoTransitionList;
+
+    var result = { video: [], audio: [], audioSupported: false, debug: debug };
+
+    if (typeof qe.project.getVideoTransitionList !== "function") {
+      return kvnJsonStringify(result);
+    }
 
     var videoList = qe.project.getVideoTransitionList();
-    kvnListTransitionsOfList(videoList).forEach(function (name) {
+    kvnListTransitionsOfList(videoList, debug, "video").forEach(function (name) {
       result.video.push({ displayName: name });
     });
 
     if (typeof qe.project.getAudioTransitionList === "function") {
       result.audioSupported = true;
       var audioList = qe.project.getAudioTransitionList();
-      kvnListTransitionsOfList(audioList).forEach(function (name) {
+      kvnListTransitionsOfList(audioList, debug, "audio").forEach(function (name) {
         result.audio.push({ displayName: name });
       });
     }
 
     return kvnJsonStringify(result);
   } catch (err) {
-    return kvnJsonStringify({ video: [], audio: [], audioSupported: false, error: String(err) });
+    return kvnJsonStringify({ video: [], audio: [], audioSupported: false, error: String(err), debug: debug });
   }
 }
 

@@ -84,7 +84,12 @@ window.KVN.PremiereBridge = (function () {
       transitions.push({ displayName: t.displayName, kind: MediaKind.AUDIO });
     });
 
-    return { transitions: transitions, audioSupported: !!response.audioSupported, error: response.error || null };
+    return {
+      transitions: transitions,
+      audioSupported: !!response.audioSupported,
+      error: response.error || null,
+      debug: response.debug || null,
+    };
   }
 
   async function applyTransitionToSelection(transition, context, position) {

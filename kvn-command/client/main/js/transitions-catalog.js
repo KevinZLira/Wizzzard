@@ -17,6 +17,7 @@ window.KVN.TransitionsCatalog = (function () {
   var cachedRawTransitions = null;
   var lastAudioSupported = false;
   var lastError = null;
+  var lastDebug = null;
 
   var metadataIndex = null;
   function getMetadataIndex() {
@@ -40,7 +41,11 @@ window.KVN.TransitionsCatalog = (function () {
 
     var result = await bridge.listHostTransitions();
     lastAudioSupported = result.audioSupported;
-    lastError = result.transitions.length === 0 ? result.error || null : null;
+    lastDebug = result.debug || null;
+    lastError =
+      result.transitions.length === 0
+        ? result.error || (result.debug ? "Host reported zero transitions. debug: " + JSON.stringify(result.debug) : null)
+        : null;
 
     var index = getMetadataIndex();
     cachedRawTransitions = result.transitions.map(function (t) {

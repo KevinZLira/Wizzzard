@@ -300,6 +300,16 @@ window.addEventListener("unhandledrejection", function (event) {
         return;
       }
 
+      if (!isPreview && state.rawTransitions.length === 0 && state.query.trim() !== "") {
+        var transitionLoadError = transitionsCatalog.getLastError();
+        resultsEl.appendChild(
+          el("div", "kvn-context-banner", [
+            el("strong", null, "0 TRANSITIONS LOADED"),
+            transitionLoadError || "kvnListTransitions returned nothing (see console for details).",
+          ])
+        );
+      }
+
       if (state.results.length === 0) {
         resultsEl.appendChild(
           el(
