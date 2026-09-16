@@ -516,16 +516,18 @@ function kvnListTransitions() {
     }
 
     var videoList = qe.project.getVideoTransitionList();
-    kvnListTransitionsOfList(videoList, debug, "video").forEach(function (name) {
-      result.video.push({ displayName: name });
-    });
+    var videoNames = kvnListTransitionsOfList(videoList, debug, "video");
+    for (var vi = 0; vi < videoNames.length; vi++) {
+      result.video.push({ displayName: videoNames[vi] });
+    }
 
     if (typeof qe.project.getAudioTransitionList === "function") {
       result.audioSupported = true;
       var audioList = qe.project.getAudioTransitionList();
-      kvnListTransitionsOfList(audioList, debug, "audio").forEach(function (name) {
-        result.audio.push({ displayName: name });
-      });
+      var audioNames = kvnListTransitionsOfList(audioList, debug, "audio");
+      for (var ai = 0; ai < audioNames.length; ai++) {
+        result.audio.push({ displayName: audioNames[ai] });
+      }
     }
 
     return kvnJsonStringify(result);
