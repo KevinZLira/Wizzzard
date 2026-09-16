@@ -7,12 +7,15 @@ window.KVN = window.KVN || {};
  * effects. This is NOT the source of truth for which effects exist —
  * premiere-bridge.js's listHostEffects() is. This file only enriches
  * whatever the host reports so search feels smart (typos, PT-BR terms,
- * "zoom" -> Transform, etc.).
+ * colloquial editor slang, "zoom" -> Transform, etc.). Every entry keeps
+ * at least ~10 keyword variations (formal + informal PT-BR, English,
+ * common misspellings) so searching in whatever words come to mind
+ * actually finds something.
  *
  * Each entry is matched against the host's real (and possibly localized
  * — Premiere returns effect names in whatever language it's running in)
  * displayName via its `names` list, not a single object key — see
- * effects-catalog.js's buildMetadataIndex(). Anything the host reports
+ * effects-catalog.js's getMetadataIndex(). Anything the host reports
  * that isn't in this table still works; it just falls back to plain
  * fuzzy-matching its own name with no extra keywords/category (this is
  * what keeps third-party plugin effects usable without inventing
@@ -37,35 +40,57 @@ window.KVN.EffectsMetadata = [
     names: ["Gaussian Blur", "Desfoque Gaussiano"],
     category: "Blur & Sharpen",
     keywords: [
-      "blur", "soft", "smooth", "fuzzy", "out of focus",
-      "desfoque", "desfoque gaussiano", "borrão", "borrado", "borrar", "embaçado",
-      "embaçar", "embasado", "difuminado", "difuso", "nebuloso", "fora de foco", "gaussiano",
+      "blur", "soft", "smooth", "fuzzy", "out of focus", "hazy", "gaussian",
+      "desfoque", "desfoque gaussiano", "borrão", "borrado", "borrar",
+      "embaçado", "embaçar", "embasado", "difuminado", "difuso", "nebuloso",
+      "fora de foco", "gaussiano", "borrar tudo", "esfumaçar",
     ],
   },
   {
     names: ["Gaussian Blur (Legacy)"],
     category: "Blur & Sharpen",
-    keywords: ["blur", "legacy", "desfoque", "desfoque gaussiano", "embaçado", "antigo", "legado"],
+    keywords: [
+      "blur", "legacy", "old", "classic", "gaussian",
+      "desfoque", "desfoque gaussiano", "desfoque antigo", "embaçado",
+      "antigo", "legado", "clássico", "borrado", "versão antiga",
+    ],
   },
   {
     names: ["Directional Blur"],
     category: "Blur & Sharpen",
-    keywords: ["blur", "motion", "direction", "speed", "desfoque direcional", "desfoque de movimento", "embaçado", "borrado"],
+    keywords: [
+      "blur", "motion", "direction", "speed", "streak", "motion blur",
+      "desfoque direcional", "desfoque de movimento", "embaçado", "borrado",
+      "rastro de movimento", "borrão de velocidade", "efeito de velocidade",
+      "movimento rápido",
+    ],
   },
   {
     names: ["Camera Blur"],
     category: "Blur & Sharpen",
-    keywords: ["blur", "focus", "camera", "desfoque de câmera", "fora de foco", "embaçado", "desfocar"],
+    keywords: [
+      "blur", "focus", "camera", "defocus", "rack focus",
+      "desfoque de câmera", "fora de foco", "embaçado", "desfocar",
+      "perder o foco", "foco da câmera", "desfoco de lente", "sem foco",
+    ],
   },
   {
     names: ["Sharpen"],
     category: "Blur & Sharpen",
-    keywords: ["sharp", "detail", "focus", "crisp", "nitidez", "afiar", "nítido", "focar", "realçar detalhes"],
+    keywords: [
+      "sharp", "detail", "focus", "crisp", "clarity", "enhance",
+      "nitidez", "afiar", "nítido", "focar", "realçar detalhes",
+      "deixar nítido", "aumentar nitidez", "melhorar definição", "definição",
+    ],
   },
   {
     names: ["Unsharp Mask"],
     category: "Blur & Sharpen",
-    keywords: ["sharp", "detail", "nitidez", "máscara de nitidez", "afiar", "realçar"],
+    keywords: [
+      "sharp", "detail", "mask", "clarity", "definition",
+      "nitidez", "máscara de nitidez", "afiar", "realçar",
+      "aumentar nitidez", "realce de detalhes", "máscara de foco", "clareza",
+    ],
   },
 
   // ---------- Color Correction / Grading ----------
@@ -73,30 +98,47 @@ window.KVN.EffectsMetadata = [
     names: ["Lumetri Color"],
     category: "Color Correction",
     keywords: [
-      "color", "grade", "grading", "lut", "look",
+      "color", "grade", "grading", "lut", "look", "tone", "color wheel",
       "cor", "correção de cor", "gradação de cor", "colorização",
-      "tratamento de cor", "colorir",
+      "tratamento de cor", "colorir", "cinema look", "cor cinematográfica",
+      "ajustar cores", "paleta de cores",
     ],
   },
   {
     names: ["Fast Color Corrector"],
     category: "Color Correction",
-    keywords: ["color", "correction", "cor", "correção rápida", "corrigir cor"],
+    keywords: [
+      "color", "correction", "hue", "saturation", "quick color",
+      "cor", "correção rápida", "corrigir cor", "correção de cor rápida",
+      "ajustar cor rápido", "matiz", "saturação",
+    ],
   },
   {
     names: ["Brightness & Contrast"],
     category: "Color Correction",
-    keywords: ["brightness", "contrast", "brilho", "contraste", "claridade", "escurecer", "clarear"],
+    keywords: [
+      "brightness", "contrast", "light", "dark", "exposure",
+      "brilho", "contraste", "claridade", "escurecer", "clarear",
+      "iluminar", "deixar mais claro", "deixar mais escuro", "luminosidade",
+    ],
   },
   {
     names: ["RGB Curves"],
     category: "Color Correction",
-    keywords: ["color", "curves", "cor", "curvas", "curva de cor"],
+    keywords: [
+      "color", "curves", "tone curve", "levels", "channels",
+      "cor", "curvas", "curva de cor", "curva de tom", "canais rgb",
+      "ajuste de curva", "níveis de cor", "curva",
+    ],
   },
   {
     names: ["Color Balance"],
     category: "Color Correction",
-    keywords: ["color", "balance", "cor", "balanço de cor", "equilíbrio de cor"],
+    keywords: [
+      "color", "balance", "white balance", "tint", "cast",
+      "cor", "balanço de cor", "equilíbrio de cor", "balanço de branco",
+      "tonalidade", "corrigir tonalidade", "matiz de cor",
+    ],
   },
 
   // ---------- Distort / Transform ----------
@@ -104,186 +146,318 @@ window.KVN.EffectsMetadata = [
     names: ["Transform"],
     category: "Distort / Transform",
     keywords: [
-      "zoom", "scale", "rotate", "position", "resize", "move",
+      "zoom", "scale", "rotate", "position", "resize", "move", "skew", "anchor point",
       "escala", "posição", "girar", "aumentar", "diminuir",
-      "redimensionar", "mover", "rotação", "ampliar",
+      "redimensionar", "mover", "rotação", "ampliar", "reduzir tamanho",
     ],
   },
   {
     names: ["Basic 3D", "3D básico"],
     category: "Distort / Transform",
-    keywords: ["3d", "rotate", "tilt", "swivel", "girar em 3d", "inclinar"],
+    keywords: [
+      "3d", "rotate", "tilt", "swivel", "depth", "perspective 3d",
+      "girar em 3d", "inclinar", "efeito 3d", "profundidade",
+      "rotação 3d", "perspectiva",
+    ],
   },
   {
     names: ["Crop"],
     category: "Distort / Transform",
-    keywords: ["crop", "cortar", "corte", "recortar", "aparar", "recorte"],
+    keywords: [
+      "crop", "trim edges", "cut frame", "border", "edge crop",
+      "cortar", "corte", "recortar", "aparar", "recorte",
+      "cortar bordas", "aparar imagem", "cortar tela",
+    ],
   },
   {
     names: ["Distort"],
     category: "Distort / Transform",
-    keywords: ["distort", "warp", "distorcer", "distorção", "deformar"],
+    keywords: [
+      "distort", "warp", "bend", "twist", "deform",
+      "distorcer", "distorção", "deformar", "torcer", "dobrar imagem",
+      "empenar", "efeito de distorção",
+    ],
   },
   {
     names: ["Mirror", "Espelho"],
     category: "Distort / Transform",
-    keywords: ["mirror", "reflect", "flip", "espelho", "espelhar", "espelhado", "inverter", "refletir"],
+    keywords: [
+      "mirror", "reflect", "flip", "duplicate side", "symmetry",
+      "espelho", "espelhar", "espelhado", "inverter", "refletir",
+      "simetria", "efeito espelho", "duplicar lado",
+    ],
   },
   {
     names: ["Horizontal Flip", "Inversão horizontal"],
     category: "Distort / Transform",
-    keywords: ["flip", "mirror", "inverter", "espelhar", "virar"],
+    keywords: [
+      "flip", "mirror", "horizontal", "invert",
+      "inverter", "espelhar", "virar", "virar horizontal",
+      "espelhar horizontal", "girar horizontalmente", "inverter imagem",
+    ],
   },
   {
     names: ["Warp Stabilizer"],
     category: "Distort / Transform",
     keywords: [
-      "stabilize", "shake", "shaky",
+      "stabilize", "shake", "shaky", "steady", "smooth motion", "gimbal",
       "estabilizar", "estabilização", "tremido", "tremendo",
-      "balançando", "câmera tremida", "firmar imagem",
+      "balançando", "câmera tremida", "firmar imagem", "corrigir tremida",
     ],
   },
   {
     names: ["Camera Shake", "Balanço de câmera"],
     category: "Distort / Transform",
-    keywords: ["shake", "camera", "tremido", "balanço", "tremer"],
+    keywords: [
+      "shake", "camera", "wobble", "vibrate", "handheld look",
+      "tremido", "balanço", "tremer", "tremida de câmera",
+      "câmera na mão", "efeito de tremido", "vibração",
+    ],
   },
   {
     names: ["Move", "Mover"],
     category: "Distort / Transform",
-    keywords: ["move", "position", "mover", "posição", "deslocar"],
+    keywords: [
+      "move", "position", "drag", "shift position", "reposition",
+      "mover", "posição", "deslocar", "mudar posição", "arrastar",
+      "movimentar", "reposicionar",
+    ],
   },
   {
     names: ["Offset", "Deslocamento"],
     category: "Distort / Transform",
-    keywords: ["offset", "shift", "deslocamento", "deslocar"],
+    keywords: [
+      "offset", "shift", "displace", "wrap around",
+      "deslocamento", "deslocar", "deslocar imagem", "mover pixel",
+      "compensar posição", "deslocamento de tela",
+    ],
   },
   {
     names: ["Grow", "Aumentar"],
     category: "Distort / Transform",
-    keywords: ["grow", "expand", "aumentar", "expandir"],
+    keywords: [
+      "grow", "expand", "enlarge", "bigger",
+      "aumentar", "expandir", "crescer", "ampliar", "deixar maior",
+      "engordar imagem", "expandir borda",
+    ],
   },
   {
     names: ["Shrink", "Encolher"],
     category: "Distort / Transform",
-    keywords: ["shrink", "reduce", "encolher", "reduzir", "diminuir"],
+    keywords: [
+      "shrink", "reduce", "smaller", "contract",
+      "encolher", "reduzir", "diminuir", "deixar menor", "contrair",
+      "afinar imagem", "reduzir borda",
+    ],
   },
   {
     names: ["Rotate", "Girar"],
     category: "Distort / Transform",
-    keywords: ["rotate", "spin", "girar", "rotação", "rodar"],
+    keywords: [
+      "rotate", "spin", "turn", "revolve",
+      "girar", "rotação", "rodar", "virar", "girar imagem",
+      "rotacionar", "girar clipe",
+    ],
   },
   {
     names: ["Auto Reframe", "Reestruturação automática"],
     category: "Distort / Transform",
-    keywords: ["reframe", "crop", "aspect ratio", "reenquadrar", "proporção", "formato"],
+    keywords: [
+      "reframe", "crop", "aspect ratio", "vertical video", "resize for social",
+      "reenquadrar", "proporção", "formato", "vídeo vertical",
+      "adaptar formato", "cortar automático", "9:16",
+    ],
   },
   {
     names: ["Auto Align", "Alinhamento automático"],
     category: "Distort / Transform",
-    keywords: ["align", "sync", "alinhar", "sincronizar"],
+    keywords: [
+      "align", "sync", "match position", "auto sync",
+      "alinhar", "sincronizar", "alinhamento", "sincronização automática",
+      "alinhar clipes", "sincronizar ângulos",
+    ],
   },
 
   // ---------- Stylize / Generate ----------
   {
     names: ["Echo", "Eco"],
     category: "Time / Stylize",
-    keywords: ["echo", "trail", "ghost", "eco", "rastro", "fantasma", "repetição"],
+    keywords: [
+      "echo", "trail", "ghost", "repeat", "motion trail", "smear",
+      "eco", "rastro", "fantasma", "repetição", "efeito fantasma",
+      "rastro de movimento", "sobreposição de quadros",
+    ],
   },
   {
     names: ["Posterize"],
     category: "Stylize",
-    keywords: ["posterize", "posterizar", "reduzir cores"],
+    keywords: [
+      "posterize", "flatten colors", "poster effect", "banding",
+      "posterizar", "reduzir cores", "efeito pôster", "cores chapadas",
+      "achatar cor", "simplificar cores",
+    ],
   },
   {
     names: ["Posterize Time", "Posterizar tempo"],
     category: "Time / Stylize",
-    keywords: ["posterize", "frame rate", "posterizar", "taxa de quadros", "travado"],
+    keywords: [
+      "posterize", "frame rate", "choppy", "stutter", "stop motion look",
+      "posterizar", "taxa de quadros", "travado", "efeito stop motion",
+      "cortar quadros", "quadros travados",
+    ],
   },
   {
     names: ["Glow", "Resplendor"],
     category: "Stylize",
-    keywords: ["glow", "shine", "brilho", "resplendor", "brilhante", "luminoso"],
+    keywords: [
+      "glow", "shine", "bloom", "halo", "radiance",
+      "brilho", "resplendor", "brilhante", "luminoso", "efeito de brilho",
+      "auréola", "halo de luz",
+    ],
   },
   {
     names: ["Edge Glow", "Brilho de aresta"],
     category: "Stylize",
-    keywords: ["glow", "edge", "brilho", "aresta", "borda"],
+    keywords: [
+      "glow", "edge", "outline glow", "rim light effect",
+      "brilho", "aresta", "borda", "brilho de contorno",
+      "contorno luminoso", "brilho nas bordas",
+    ],
   },
   {
     names: ["Wonder Glow", "Brilho maravilhoso"],
     category: "Stylize",
-    keywords: ["glow", "dreamy", "brilho", "sonhador", "etéreo"],
+    keywords: [
+      "glow", "dreamy", "soft glow", "ethereal", "magical look",
+      "brilho", "sonhador", "etéreo", "brilho suave", "efeito mágico",
+      "brilho sonhador",
+    ],
   },
   {
     names: ["Light Leaks", "Vazamentos de luz"],
     category: "Stylize",
-    keywords: ["light leak", "flare", "vazamento de luz", "luz vazando", "vintage"],
+    keywords: [
+      "light leak", "flare", "film look", "sun flare", "vintage light",
+      "vazamento de luz", "luz vazando", "vintage", "efeito retrô",
+      "luz de filme antigo", "brilho retrô",
+    ],
   },
   {
     names: ["Volumetric Rays", "Raios volumétricos"],
     category: "Stylize",
-    keywords: ["god rays", "light rays", "raios de luz", "raios volumétricos", "raios de sol"],
+    keywords: [
+      "god rays", "light rays", "sun rays", "crepuscular rays", "beams",
+      "raios de luz", "raios volumétricos", "raios de sol",
+      "raios divinos", "feixes de luz",
+    ],
   },
   {
     names: ["RGB Split", "Divisão de RGB"],
     category: "Stylize",
-    keywords: ["rgb split", "chromatic aberration", "glitch", "divisão de cor", "aberração cromática"],
+    keywords: [
+      "rgb split", "chromatic aberration", "glitch", "color shift", "vhs glitch",
+      "divisão de cor", "aberração cromática", "efeito glitch",
+      "deslocamento de cor", "efeito vhs",
+    ],
   },
   {
     names: ["Drop Shadow", "Sombra projetada"],
     category: "Stylize",
-    keywords: ["shadow", "drop shadow", "sombra", "sombra projetada"],
+    keywords: [
+      "shadow", "drop shadow", "cast shadow", "depth shadow",
+      "sombra", "sombra projetada", "sombra atrás", "adicionar sombra",
+      "efeito de profundidade", "sombra de texto",
+    ],
   },
   {
     names: ["Long Shadow", "Sombra longa"],
     category: "Stylize",
-    keywords: ["shadow", "long shadow", "sombra longa", "sombra comprida"],
+    keywords: [
+      "shadow", "long shadow", "flat design shadow", "stretched shadow",
+      "sombra", "sombra longa", "sombra comprida", "sombra esticada",
+      "sombra estilizada", "efeito de sombra longa", "sombra diagonal",
+    ],
   },
   {
     names: ["Brush Strokes", "Traçados de pincel"],
     category: "Stylize",
-    keywords: ["paint", "brush", "pintura", "pincel", "traços"],
+    keywords: [
+      "paint", "brush", "painterly", "artistic filter", "watercolor look",
+      "pintura", "pincel", "traços", "efeito de pintura",
+      "aquarela", "estilo pintado",
+    ],
   },
   {
     names: ["Color Emboss", "Entalhe de cor"],
     category: "Stylize",
-    keywords: ["emboss", "relief", "entalhe", "relevo"],
+    keywords: [
+      "emboss", "relief", "3d texture", "engraved look",
+      "entalhe", "relevo", "efeito de relevo", "gravado",
+      "textura em relevo", "efeito 3d de superfície",
+    ],
   },
   {
     names: ["Find Edges", "Localizar bordas"],
     category: "Stylize",
-    keywords: ["edges", "outline", "bordas", "contorno", "desenho"],
+    keywords: [
+      "edges", "outline", "sketch effect", "line art", "cartoon edges",
+      "bordas", "contorno", "desenho", "efeito desenho",
+      "contornos da imagem", "estilo cartoon",
+    ],
   },
   {
     names: ["Mosaic", "Mosaico"],
     category: "Stylize",
-    keywords: ["mosaic", "pixelate", "mosaico", "pixelizar", "pixelado"],
+    keywords: [
+      "mosaic", "pixelate", "censor", "blur face", "pixel blocks",
+      "mosaico", "pixelizar", "pixelado", "censurar rosto",
+      "esconder rosto", "efeito pixelado",
+    ],
   },
   {
     names: ["Roughen Edges", "Tornar bordas ásperas"],
     category: "Stylize",
-    keywords: ["rough edges", "torn", "bordas ásperas", "rasgado", "irregular"],
+    keywords: [
+      "rough edges", "torn", "grunge edge", "distressed border",
+      "bordas ásperas", "rasgado", "irregular", "borda rasgada",
+      "efeito envelhecido", "borda irregular",
+    ],
   },
   {
     names: ["Strobe Light", "Luz estroboscópica"],
     category: "Stylize",
-    keywords: ["strobe", "flash", "flicker", "estroboscópica", "piscar"],
+    keywords: [
+      "strobe", "flash", "flicker", "blink effect", "party light",
+      "estroboscópica", "piscar", "efeito flash", "luz piscando",
+      "estrobo", "piscada de luz",
+    ],
   },
   {
     names: ["Noise", "Ruído"],
     category: "Noise & Grain",
-    keywords: ["noise", "grain", "texture", "static", "ruído", "granulado", "grão", "textura", "chiado visual"],
+    keywords: [
+      "noise", "grain", "texture", "static", "film grain", "vhs noise",
+      "ruído", "granulado", "grão", "textura", "chiado visual",
+      "efeito vhs", "textura de filme", "chuvisco",
+    ],
   },
   {
     names: ["Noise Alpha"],
     category: "Noise & Grain",
-    keywords: ["noise", "alpha", "ruído"],
+    keywords: [
+      "noise", "alpha", "transparency noise", "grain alpha", "grain",
+      "ruído", "ruído no alfa", "textura transparente",
+      "granulado transparente", "textura", "grão no canal alfa",
+    ],
   },
   {
     names: ["Median"],
     category: "Noise & Grain",
-    keywords: ["denoise", "median", "smooth", "reduzir ruído", "suavizar", "limpar imagem"],
+    keywords: [
+      "denoise", "median", "smooth", "painterly blur", "reduce grain",
+      "reduzir ruído", "suavizar", "limpar imagem", "suavizar textura",
+      "amenizar granulado", "filtro de mediana",
+    ],
   },
 
   // ---------- Keying ----------
@@ -291,181 +465,309 @@ window.KVN.EffectsMetadata = [
     names: ["Ultra Key"],
     category: "Keying",
     keywords: [
-      "key", "chroma", "green screen", "chroma key",
+      "key", "chroma", "green screen", "chroma key", "blue screen",
       "croma", "chave verde", "fundo verde", "remover fundo",
-      "tela verde", "recortar fundo",
+      "tela verde", "recortar fundo", "trocar fundo", "fundo azul",
     ],
   },
   {
     names: ["Track Matte Key"],
     category: "Keying",
-    keywords: ["matte", "key", "máscara", "máscara de rastreamento"],
+    keywords: [
+      "matte", "key", "luma matte", "mask track", "alpha matte",
+      "máscara", "máscara de rastreamento", "máscara de vídeo",
+      "chave de máscara", "recorte com máscara",
+    ],
   },
 
   // ---------- Utility / Generate ----------
   {
     names: ["Cineon Converter", "Conversor Cineon"],
     category: "Utility",
-    keywords: ["cineon", "log", "conversor"],
+    keywords: [
+      "cineon", "log", "log footage", "convert log", "10-bit log", "dpx",
+      "conversor", "converter log", "conversão cineon",
+      "arquivo log", "converter imagem log", "converter formato",
+    ],
   },
   {
     names: ["Clone"],
     category: "Utility",
-    keywords: ["clone", "duplicate", "clonar", "duplicar"],
+    keywords: [
+      "clone", "duplicate", "copy stamp", "clone stamp",
+      "clonar", "duplicar", "efeito clone", "copiar área",
+      "carimbo clone", "duplicação",
+    ],
   },
   {
     names: ["Simple Text", "Texto simples"],
     category: "Generate",
-    keywords: ["text", "title", "texto", "título", "legenda"],
+    keywords: [
+      "text", "title", "caption", "add text", "basic text",
+      "texto", "título", "legenda", "adicionar texto",
+      "texto simples", "inserir título",
+    ],
   },
   {
     names: ["Stroke", "Traçado"],
     category: "Generate",
-    keywords: ["stroke", "outline", "traçado", "contorno", "borda"],
+    keywords: [
+      "stroke", "outline", "border line", "edge line",
+      "traçado", "contorno", "borda", "linha de contorno",
+      "adicionar borda", "delinear",
+    ],
   },
 
   // ---------- Audio: EQ / Filter ----------
   {
     names: ["Parametric Equalizer"],
     category: "Audio / EQ",
-    keywords: ["eq", "equalizer", "equalização", "equalizar"],
+    keywords: [
+      "eq", "equalizer", "frequency", "tone shaping", "audio eq",
+      "equalização", "equalizar", "equalizador", "ajustar frequência",
+      "equalizador de áudio",
+    ],
   },
   {
     names: ["Graphic Equalizer (20 Bands)", "Graphic Equalizer"],
     category: "Audio / EQ",
-    keywords: ["eq", "equalizer", "equalização", "equalizar"],
+    keywords: [
+      "eq", "equalizer", "bands", "graphic eq", "frequency bands",
+      "equalização", "equalizar", "equalizador gráfico",
+      "bandas de frequência", "equalizador de bandas",
+    ],
   },
   {
     names: ["FFT Filter"],
     category: "Audio / EQ",
-    keywords: ["filter", "fft", "filtro"],
+    keywords: [
+      "filter", "fft", "spectral filter", "frequency filter", "eq",
+      "filtro", "filtro espectral", "filtro de frequência",
+      "análise de frequência", "equalizar", "filtro avançado",
+    ],
   },
   {
     names: ["Notch Filter"],
     category: "Audio / EQ",
-    keywords: ["notch", "filter", "filtro entalhe"],
+    keywords: [
+      "notch", "filter", "remove frequency", "hum removal filter", "eq",
+      "filtro entalhe", "remover frequência", "filtro notch",
+      "cortar frequência específica", "equalizar", "remover zumbido",
+    ],
   },
   {
     names: ["Treble"],
     category: "Audio / EQ",
-    keywords: ["treble", "high", "agudo", "agudos"],
+    keywords: [
+      "treble", "high", "highs", "brightness audio", "eq",
+      "agudo", "agudos", "som agudo", "realçar agudos",
+      "frequência alta", "equalizar agudo",
+    ],
   },
   {
     names: ["Bass"],
     category: "Audio / EQ",
-    keywords: ["bass", "low", "grave", "graves"],
+    keywords: [
+      "bass", "low", "lows", "sub bass", "warmth",
+      "grave", "graves", "som grave", "realçar graves",
+      "frequência baixa",
+    ],
   },
   {
     names: ["Highpass"],
     category: "Audio / EQ",
-    keywords: ["high pass", "filter", "passa-alta"],
+    keywords: [
+      "high pass", "filter", "cut lows", "remove rumble", "eq",
+      "passa-alta", "filtro passa-alta", "cortar graves",
+      "remover ruído grave", "equalizar", "cortar frequência baixa",
+    ],
   },
   {
     names: ["Lowpass"],
     category: "Audio / EQ",
-    keywords: ["low pass", "filter", "passa-baixa"],
+    keywords: [
+      "low pass", "filter", "cut highs", "muffle", "eq",
+      "passa-baixa", "filtro passa-baixa", "cortar agudos",
+      "abafar som", "equalizar", "cortar frequência alta",
+    ],
   },
 
   // ---------- Audio: Reverb / Delay ----------
   {
     names: ["Reverb"],
     category: "Audio / Reverb",
-    keywords: ["reverb", "room", "space", "reverberação", "ambiente", "eco de sala", "sala"],
+    keywords: [
+      "reverb", "room", "space", "ambience", "hall",
+      "reverberação", "ambiente", "eco de sala", "sala",
+      "som de sala", "espaço acústico",
+    ],
   },
   {
     names: ["Studio Reverb"],
     category: "Audio / Reverb",
-    keywords: ["reverb", "room", "reverberação", "ambiente", "sala"],
+    keywords: [
+      "reverb", "room", "studio", "hall reverb", "space",
+      "reverberação", "ambiente", "sala", "reverb de estúdio",
+      "eco de estúdio", "espaço acústico",
+    ],
   },
   {
     names: ["Convolution Reverb"],
     category: "Audio / Reverb",
-    keywords: ["reverb", "convolution", "reverberação", "convolução"],
+    keywords: [
+      "reverb", "convolution", "impulse response", "realistic reverb", "room",
+      "reverberação", "convolução", "reverb realista",
+      "resposta de impulso", "ambiente realista",
+    ],
   },
   {
     names: ["Delay"],
     category: "Audio / Delay",
-    keywords: ["delay", "echo", "atraso", "eco", "repetição"],
+    keywords: [
+      "delay", "echo", "repeat", "bounce sound", "reverb-like",
+      "atraso", "eco", "repetição", "eco de áudio",
+      "atraso de som", "efeito de eco",
+    ],
   },
   {
     names: ["Analog Delay"],
     category: "Audio / Delay",
-    keywords: ["delay", "echo", "atraso", "eco"],
+    keywords: [
+      "delay", "echo", "analog", "warm echo", "tape delay",
+      "atraso", "eco", "eco analógico", "atraso analógico",
+      "eco quente",
+    ],
   },
   {
     names: ["Multitap Delay"],
     category: "Audio / Delay",
-    keywords: ["delay", "echo", "atraso", "eco", "múltiplo"],
+    keywords: [
+      "delay", "echo", "multiple echo", "rhythmic delay", "tap delay",
+      "atraso", "eco", "múltiplo", "eco múltiplo",
+      "atraso rítmico", "eco em camadas",
+    ],
   },
 
   // ---------- Audio: Dynamics ----------
   {
     names: ["Dynamics"],
     category: "Audio / Dynamics",
-    keywords: ["compressor", "gate", "limiter", "compressão", "dinâmica"],
+    keywords: [
+      "compressor", "gate", "limiter", "noise gate", "level control",
+      "compressão", "dinâmica", "compressor de áudio",
+      "controle de volume", "gate de ruído",
+    ],
   },
   {
     names: ["Multiband Compressor"],
     category: "Audio / Dynamics",
-    keywords: ["compressor", "compressão", "compressor de áudio"],
+    keywords: [
+      "compressor", "multiband", "mastering compressor", "dynamics",
+      "compressão", "compressor de áudio", "compressor multibanda",
+      "compressão de faixas", "masterização", "dinâmica de áudio",
+    ],
   },
   {
     names: ["Hard Limiter"],
     category: "Audio / Dynamics",
-    keywords: ["limiter", "limitador"],
+    keywords: [
+      "limiter", "cap volume", "prevent clipping", "loudness limiter", "peak control",
+      "limitador", "limitar volume", "evitar distorção",
+      "controlar pico", "limitar áudio",
+    ],
   },
   {
     names: ["Single-Band Compressor"],
     category: "Audio / Dynamics",
-    keywords: ["compressor", "compressão"],
+    keywords: [
+      "compressor", "single band", "basic compressor", "dynamics", "level control",
+      "compressão", "compressor simples", "compressor de áudio",
+      "compressor básico", "controle de volume",
+    ],
   },
   {
     names: ["Amplify"],
     category: "Audio / Dynamics",
-    keywords: ["amplify", "gain", "volume", "amplificar", "ganho"],
+    keywords: [
+      "amplify", "gain", "volume", "boost volume", "increase level",
+      "amplificar", "ganho", "aumentar volume", "subir volume",
+      "aumentar áudio",
+    ],
   },
 
   // ---------- Audio: Modulation ----------
   {
     names: ["Chorus"],
     category: "Audio / Modulation",
-    keywords: ["chorus", "coro", "modulação"],
+    keywords: [
+      "chorus", "modulation", "thicken sound", "doubling effect", "widen",
+      "coro", "modulação", "engrossar som", "efeito de coro",
+      "duplicar voz", "alargar som",
+    ],
   },
   {
     names: ["Flanger"],
     category: "Audio / Modulation",
-    keywords: ["flanger", "modulação"],
+    keywords: [
+      "flanger", "modulation", "sweeping sound", "jet sound effect", "swoosh",
+      "modulação", "efeito flanger", "som de avião",
+      "efeito de varredura", "som espacial",
+    ],
   },
   {
     names: ["Phaser"],
     category: "Audio / Modulation",
-    keywords: ["phaser", "modulação"],
+    keywords: [
+      "phaser", "modulation", "swirling sound", "phase shift", "psychedelic",
+      "modulação", "efeito phaser", "som giratório",
+      "deslocamento de fase", "som psicodélico",
+    ],
   },
   {
     names: ["Tremolo"],
     category: "Audio / Modulation",
-    keywords: ["tremolo", "modulação"],
+    keywords: [
+      "tremolo", "modulation", "volume wobble", "pulsing sound", "throb",
+      "modulação", "efeito tremolo", "som pulsante",
+      "vibração de volume", "som ondulante",
+    ],
   },
 
   // ---------- Audio: Noise Reduction / Restoration ----------
   {
     names: ["DeNoise"],
     category: "Audio / Noise Reduction",
-    keywords: ["noise reduction", "denoise", "hiss", "redução de ruído", "remover ruído", "limpar áudio", "chiado"],
+    keywords: [
+      "noise reduction", "denoise", "hiss", "clean audio", "background noise",
+      "redução de ruído", "remover ruído", "limpar áudio", "chiado",
+      "ruído de fundo", "tirar chiado",
+    ],
   },
   {
     names: ["DeHummer"],
     category: "Audio / Noise Reduction",
-    keywords: ["hum", "buzz", "zumbido", "ronco"],
+    keywords: [
+      "hum", "buzz", "electrical noise", "60hz hum", "ground loop",
+      "zumbido", "ronco", "remover zumbido", "ruído elétrico",
+      "zumbido de fio", "ruído de tomada",
+    ],
   },
   {
     names: ["Noise Reduction / Restoration", "Noise Reduction"],
     category: "Audio / Noise Reduction",
-    keywords: ["noise reduction", "restoration", "redução de ruído", "remover ruído", "restauração", "limpar áudio"],
+    keywords: [
+      "noise reduction", "restoration", "clean audio", "remove hiss",
+      "redução de ruído", "remover ruído", "restauração", "limpar áudio",
+      "restaurar áudio", "tirar ruído",
+    ],
   },
   {
     names: ["Adaptive Noise Reduction"],
     category: "Audio / Noise Reduction",
-    keywords: ["noise reduction", "adaptive", "redução de ruído", "adaptativo"],
+    keywords: [
+      "noise reduction", "adaptive", "smart denoise", "automatic cleanup", "hiss",
+      "redução de ruído", "adaptativo", "limpeza automática",
+      "redução inteligente de ruído", "chiado",
+    ],
   },
 ];
