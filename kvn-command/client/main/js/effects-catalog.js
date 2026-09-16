@@ -15,11 +15,31 @@ window.KVN = window.KVN || {};
 window.KVN.EffectsCatalog = (function () {
   var bridge = window.KVN.PremiereBridge;
   var METADATA = window.KVN.EffectsMetadata;
+  var normalize = window.KVN.SearchEngine.normalize;
 
   var cachedRawEffects = null; // host round-trip result, cached for the panel session
   var lastAudioSupported = false;
   var lastError = null;
   var lastDebug = null; // kept even on a "successful" load — useful when items load but with bad/empty fields
+
+  // Premiere returns effect names in whatever language it's running in
+  // (confirmed: a PT-BR host returns PT-BR display names), so metadata
+  // entries can't be keyed by a single displayName string the way a
+  // single-language product could. Build a normalize()d name -> entry
+  // index from EffectsMetadata's `names` lists instead, once, so a
+  // Portuguese OR English (or whichever names are listed) display name
+  // both resolve to the same enrichment.
+  var metadataIndex = null;
+  function getMetadataIndex() {
+    if (metadataIndex) return metadataIndex;
+    metadataIndex = {};
+    METADATA.forEach(function (entry) {
+      entry.names.forEach(function (name) {
+        metadataIndex[normalize(name)] = entry;
+      });
+    });
+    return metadataIndex;
+  }
 
   function effectId(hostEffect) {
     // matchName is null for every effect on this host (see host/ppro.jsx)
@@ -41,13 +61,14 @@ window.KVN.EffectsCatalog = (function () {
     } else {
       lastError = null;
     }
+    var index = getMetadataIndex();
     cachedRawEffects = result.effects.map(function (e) {
       return {
         displayName: e.displayName,
         matchName: e.matchName,
         kind: e.kind,
         id: effectId(e),
-        meta: METADATA[e.displayName] || null,
+        meta: index[normalize(e.displayName)] || null,
       };
     });
     return cachedRawEffects;
