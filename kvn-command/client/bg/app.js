@@ -48,7 +48,7 @@ var server = http.createServer(function (req, res) {
 
   if (req.url === "/ping") {
     res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end("kvn-command-bg alive");
+    res.end("kvn-command-bg alive, node " + process.version);
     return;
   }
 
@@ -63,5 +63,13 @@ server.on("error", function (err) {
 });
 
 server.listen(PORT, HOST, function () {
-  console.log("[KVN Command BG] Listening on http://" + HOST + ":" + PORT);
+  console.log("[KVN Command BG] Listening on http://" + HOST + ":" + PORT + " (Node " + process.version + ")");
 });
+
+// Surfaced in the (currently still manually-openable, for debugging)
+// window itself — this is the concrete data point needed to know which
+// native global-hotkey library (if any) could actually run here, since
+// CEP's embedded Node version varies by CEP release and native addons
+// are Node-ABI-sensitive.
+var versionEl = document.getElementById("node-version");
+if (versionEl) versionEl.textContent = "Node.js " + process.version;

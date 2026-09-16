@@ -85,8 +85,17 @@
                         <Parameter>--mixed-context</Parameter>
                     </CEFCommandLine>
                 </Resources>
+                <!-- The documented pattern for an invisible Custom-type
+                     extension that should run continuously from Premiere
+                     startup is AutoVisible=false + StartOn the
+                     AppOnline event — NOT AutoVisible=true, which is a
+                     Panel-type-only auto-open behavior. This was the
+                     actual bug behind it never starting on its own. -->
                 <Lifecycle>
-                    <AutoVisible>true</AutoVisible>
+                    <AutoVisible>false</AutoVisible>
+                    <StartOn>
+                        <Event>com.adobe.csxs.events.AppOnline</Event>
+                    </StartOn>
                 </Lifecycle>
                 <UI>
                     <Type>Custom</Type>
