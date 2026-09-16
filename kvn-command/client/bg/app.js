@@ -20,6 +20,15 @@
  */
 
 var http = require("http");
+var path = require("path");
+
+// __dirname here resolves to the EXTENSION ROOT (confirmed via
+// /debug-paths — it's the same kind of root-relative resolution
+// surprise for <script src>-loaded files hit earlier in the abandoned
+// UXP build), not this script's own client/bg/ folder. Build the path
+// to the native loader explicitly from that root instead of a relative
+// require().
+var UIOHOOK_LOADER_PATH = path.join(__dirname, "client", "bg", "native", "uiohook-loader.js");
 
 var PORT = 51234;
 var HOST = "127.0.0.1";
@@ -63,7 +72,7 @@ function setHotkeyStatus(text, isError) {
 function initGlobalHotkey() {
   var uiohook;
   try {
-    uiohook = require("./native/uiohook-loader.js");
+    uiohook = require(UIOHOOK_LOADER_PATH);
   } catch (err) {
     console.error("[KVN Command BG] Failed to load uiohook-loader:", err);
     setHotkeyStatus("Loader error: " + (err && err.message ? err.message : String(err)), true);
