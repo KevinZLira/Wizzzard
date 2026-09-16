@@ -110,6 +110,7 @@ window.KVN.EffectsCatalog = (function () {
         var isHidden = hidden.indexOf(e.id) !== -1;
         return {
           id: e.id,
+          type: "effect",
           kind: e.kind,
           matchName: e.matchName,
           displayName: e.displayName,

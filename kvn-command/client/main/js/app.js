@@ -64,6 +64,7 @@ window.addEventListener("unhandledrejection", function (event) {
     var store = window.KVN.Store;
     var bridge = window.KVN.PremiereBridge;
     var catalog = window.KVN.EffectsCatalog;
+    var transitionsCatalog = window.KVN.TransitionsCatalog;
     var isPreview = !window.__adobe_cep__;
 
     var state = {
@@ -74,6 +75,7 @@ window.addEventListener("unhandledrejection", function (event) {
       context: { count: 0, kind: "unknown" },
       userState: store.load(),
       rawEffects: [],
+      rawTransitions: [],
       loading: true,
     };
 
@@ -127,12 +129,19 @@ window.addEventListener("unhandledrejection", function (event) {
         return;
       }
 
-      var pool = catalog.buildSearchPool(state.rawEffects, {
+      var poolOpts = {
         settings: state.userState.settings,
         favorites: state.userState.favorites,
         hidden: state.userState.hidden,
         recent: state.userState.recent,
-      });
+      };
+      // Effects and transitions are two different host APIs (see
+      // premiere-bridge.js/transitions-catalog.js) but share one search
+      // pool — each entry carries `type` ("effect"/"transition") so
+      // applyActive() knows which apply call to make.
+      var pool = catalog.buildSearchPool(state.rawEffects, poolOpts).concat(
+        transitionsCatalog.buildSearchPool(state.rawTransitions, poolOpts)
+      );
 
       var kind = state.context.kind;
       var boosted = pool.map(function (e) {
@@ -173,6 +182,12 @@ window.addEventListener("unhandledrejection", function (event) {
       } catch (err) {
         console.error("[KVN Command] Failed to load host effects:", err);
         state.rawEffects = [];
+      }
+      try {
+        state.rawTransitions = await transitionsCatalog.loadRawTransitions(opts || {});
+      } catch (err) {
+        console.error("[KVN Command] Failed to load host transitions:", err);
+        state.rawTransitions = [];
       }
       state.loading = false;
     }
@@ -397,7 +412,10 @@ window.addEventListener("unhandledrejection", function (event) {
       }
 
       try {
-        var result = await bridge.applyEffectToSelection(effect, state.context);
+        var result =
+          effect.type === "transition"
+            ? await bridge.applyTransitionToSelection(effect, state.context)
+            : await bridge.applyEffectToSelection(effect, state.context);
         if (result.appliedTo > 0) {
           state.userState = store.pushRecent(state.userState, effect.id);
           showToast(toastEl, "Applied " + effect.displayName, false);
@@ -570,12 +588,15 @@ window.addEventListener("unhandledrejection", function (event) {
       wrap.appendChild(back);
       wrap.appendChild(el("h2", null, kind === "favorites" ? "Favorites" : "Hidden Effects"));
 
-      var pool = catalog.buildSearchPool(state.rawEffects, {
+      var manageOpts = {
         settings: Object.assign({}, state.userState.settings, { showHiddenEffects: true, showAudioEffects: true }),
         favorites: state.userState.favorites,
         hidden: state.userState.hidden,
         recent: state.userState.recent,
-      });
+      };
+      var pool = catalog
+        .buildSearchPool(state.rawEffects, manageOpts)
+        .concat(transitionsCatalog.buildSearchPool(state.rawTransitions, manageOpts));
       var list = pool.filter(function (e) {
         return kind === "favorites" ? e.isFavorite : e.isHidden;
       });

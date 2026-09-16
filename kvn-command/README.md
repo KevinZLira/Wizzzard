@@ -143,13 +143,23 @@ client/main/
                                convention exists
     premiere-bridge.js         JS-side counterpart to host/ppro.jsx:
                                 getSelectionContext / listHostEffects /
-                                applyEffectToSelection
+                                applyEffectToSelection / listHostTransitions /
+                                applyTransitionToSelection
     effects-metadata.js         Curated aliases/keywords/category overlay
-                                 — data, not code branches
+                                 for effects — data, not code branches
     effects-catalog.js          Merges host effects + metadata + user
                                  state (favorites/hidden/recent) into
-                                 search-ready entries; caches the host
-                                 round-trip per session
+                                 search-ready entries (type: "effect");
+                                 caches the host round-trip per session
+    transitions-metadata.js     Same idea as effects-metadata.js, for
+                                 Premiere's "classic" transition set
+    transitions-catalog.js      Mirrors effects-catalog.js for
+                                 transitions (type: "transition") — kept
+                                 separate since applying one is a
+                                 different host call with different
+                                 semantics (an edit point, not a whole
+                                 clip), merged into one search pool in
+                                 app.js
     search-engine.js            Dependency-free fuzzy search: exact →
                                  substring → subsequence → edit-distance
                                  typo fallback (typo fallback only applies
@@ -202,17 +212,34 @@ Restart Premiere Pro, then **Window ▸ Extensions ▸ KVN Command**.
 
 ## What's implemented
 
-Core search+apply loop, context awareness (video/audio/none selected),
-smart + fuzzy search (typo tolerance, PT-BR aliases), apply feedback and
-fast repeat workflow, favorites/hidden/recently-used, settings UI, and
-the KVN dark/acid-green visual identity. Architecture is fully
-data-driven per the design goal of not hardcoding effect-specific
-branches.
+Core search+apply loop for both **effects** and **transitions**, context
+awareness (video/audio/none selected), smart + fuzzy search (typo
+tolerance, PT-BR aliases), apply feedback and fast repeat workflow,
+favorites/hidden/recently-used, settings UI, and the KVN dark/acid-green
+visual identity. Architecture is fully data-driven per the design goal
+of not hardcoding effect-specific branches.
+
+Transitions apply at the **start** of the selected clip by default (an
+"opening" transition), spanning the cut, at a fixed ~30-frame duration —
+see the note in `host/ppro.jsx`'s `kvnApplyTransition` about this being
+a timebase-naive first version, not reading the sequence's actual frame
+rate. Scoped to Premiere's documented "classic" transitions
+(`transitions-metadata.js`); newer bundled Film Impact-branded ones
+aren't in the curated list but are still searchable by their own name if
+your Premiere has them, same as any effect not in `effects-metadata.js`.
 
 ## What's intentionally NOT implemented yet
 
 - A real global OS-level hotkey (see "Opening the window" above — the
   path is understood, not shipped unverified).
+- Reading/applying user-imported **effect presets** (`.prfpset` files) —
+  confirmed via Adobe community reports that these do not appear in
+  `getVideoEffectList()` at all, so they're invisible to this plugin's
+  search. The documented workaround (parse the preset's XML directly,
+  apply the base effect, then set each parameter from the file) is real
+  but unimplemented.
+- Transition duration/position aren't user-configurable yet (always
+  "start of clip, ~1 second, spanning the cut").
 - Turning this into a general Premiere command palette ("add adjustment
   layer", "nest sequence", "export", "marker") — deferred on purpose:
   get search+apply solid first. A future action would just be another

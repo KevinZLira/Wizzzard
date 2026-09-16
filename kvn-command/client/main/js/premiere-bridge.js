@@ -66,5 +66,46 @@ window.KVN.PremiereBridge = (function () {
     return { appliedTo: response.appliedTo || 0, errors: response.errors || [], debug: response.debug || null };
   }
 
-  return { MediaKind: MediaKind, getSelectionContext: getSelectionContext, listHostEffects: listHostEffects, applyEffectToSelection: applyEffectToSelection };
+  async function listHostTransitions() {
+    var response = await bridge.callHostJson("kvnListTransitions", []);
+    if (!response) {
+      return {
+        transitions: [],
+        audioSupported: false,
+        error: bridge.lastError || "No response from host (evalScript returned nothing parseable).",
+      };
+    }
+
+    var transitions = [];
+    (response.video || []).forEach(function (t) {
+      transitions.push({ displayName: t.displayName, kind: MediaKind.VIDEO });
+    });
+    (response.audio || []).forEach(function (t) {
+      transitions.push({ displayName: t.displayName, kind: MediaKind.AUDIO });
+    });
+
+    return { transitions: transitions, audioSupported: !!response.audioSupported, error: response.error || null };
+  }
+
+  async function applyTransitionToSelection(transition, context, position) {
+    if (!context || context.count === 0) {
+      throw new Error("NO_TARGET_SELECTED");
+    }
+    if (context.kind !== transition.kind && context.kind !== MediaKind.MIXED) {
+      throw new Error("NO_MATCHING_TARGET");
+    }
+
+    var response = await bridge.callHostJson("kvnApplyTransition", [transition.displayName, transition.kind, position || "start"]);
+    if (!response) throw new Error("HOST_UNAVAILABLE");
+    return { appliedTo: response.appliedTo || 0, errors: response.errors || [] };
+  }
+
+  return {
+    MediaKind: MediaKind,
+    getSelectionContext: getSelectionContext,
+    listHostEffects: listHostEffects,
+    applyEffectToSelection: applyEffectToSelection,
+    listHostTransitions: listHostTransitions,
+    applyTransitionToSelection: applyTransitionToSelection,
+  };
 })();

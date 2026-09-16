@@ -434,3 +434,133 @@ function kvnApplyEffect(effectName, kind) {
     return kvnJsonStringify({ appliedTo: 0, errors: [String(err)] });
   }
 }
+
+/**
+ * Transitions — a separate QE API from effects, confirmed independently
+ * by multiple Adobe community threads (not invented for this plugin):
+ * qe.project.getVideoTransitionList()/getVideoTransitionByName(name) to
+ * find one, QETrackItem.addTransition(...) to apply it. Audio's mirror
+ * (getAudioTransitionList/getAudioTransitionByName) is plausible by
+ * symmetry but not independently confirmed, so — same as effects —
+ * every audio transition call is feature-detected before use.
+ *
+ * addTransition()'s parameters aren't officially documented; the shape
+ * used here (transition, addToStart, durationString, offsetString,
+ * alignment, singleSided, alignToVideo) is what's consistently described
+ * across multiple independent community write-ups, not guessed from
+ * scratch. Durations are frame counts as a string ("30"), which is
+ * timebase-dependent — this always applies a fixed 30-frame duration
+ * rather than reading the sequence's actual frame rate, so on a very
+ * different frame rate the transition will be longer or shorter than
+ * "1 second" in real time. Good enough for a first version; refine once
+ * this is confirmed working at all.
+ */
+function kvnListTransitionsOfList(list) {
+  var names = [];
+  var rawNumItems = list.numItems;
+  var rawLength = list.length;
+  var count = 0;
+  if (typeof rawNumItems === "number") {
+    count = rawNumItems;
+  } else if (typeof rawLength === "number") {
+    count = rawLength;
+  }
+
+  for (var i = 0; i < count; i++) {
+    var item = list[i];
+    if (!item) continue;
+    var name = null;
+    if (typeof item.toJSON === "function") {
+      try {
+        var data = item.toJSON();
+        name = typeof data === "string" ? data : data && (data.name || data.displayName);
+      } catch (e) {
+        // fall through
+      }
+    }
+    if (!name && typeof item.name === "string") name = item.name;
+    if (name) names.push(name);
+  }
+  return names;
+}
+
+function kvnListTransitions() {
+  try {
+    kvnEnsureQE();
+    var result = { video: [], audio: [], audioSupported: false };
+
+    var videoList = qe.project.getVideoTransitionList();
+    kvnListTransitionsOfList(videoList).forEach(function (name) {
+      result.video.push({ displayName: name });
+    });
+
+    if (typeof qe.project.getAudioTransitionList === "function") {
+      result.audioSupported = true;
+      var audioList = qe.project.getAudioTransitionList();
+      kvnListTransitionsOfList(audioList).forEach(function (name) {
+        result.audio.push({ displayName: name });
+      });
+    }
+
+    return kvnJsonStringify(result);
+  } catch (err) {
+    return kvnJsonStringify({ video: [], audio: [], audioSupported: false, error: String(err) });
+  }
+}
+
+/**
+ * Applies one transition to every currently selected clip of the given
+ * kind, at the START of the clip by default (an "opening" transition —
+ * matches the common "abertura de X" phrasing this is meant to answer).
+ * Returns { appliedTo, errors } as JSON.
+ */
+function kvnApplyTransition(transitionName, kind, position) {
+  try {
+    kvnEnsureQE();
+
+    if (kind === "audio" && typeof qe.project.getAudioTransitionByName !== "function") {
+      return kvnJsonStringify({
+        appliedTo: 0,
+        errors: ["Audio transitions aren't available via this Premiere version's QE API."],
+      });
+    }
+
+    var debug = {};
+    var targets = kvnFindSelectedQeItems(kind, debug);
+    if (targets.length === 0) {
+      return kvnJsonStringify({ appliedTo: 0, errors: ["NO_MATCHING_TARGET"], debug: debug });
+    }
+
+    var transition =
+      kind === "video"
+        ? qe.project.getVideoTransitionByName(transitionName)
+        : qe.project.getAudioTransitionByName(transitionName);
+
+    if (!transition) {
+      return kvnJsonStringify({ appliedTo: 0, errors: ['Transition "' + transitionName + '" not found.'] });
+    }
+
+    var addToStart = position !== "end";
+    var duration = "30"; // ~1s at 30fps — see note above about timebase.
+    var offset = "0:00";
+    var alignment = 0; // 0 = aligned to the start of the cut
+    var singleSided = false; // spans across the cut rather than only one side
+    var alignToVideo = true;
+
+    var appliedTo = 0;
+    var errors = [];
+
+    for (var i = 0; i < targets.length; i++) {
+      try {
+        targets[i].qeItem.addTransition(transition, addToStart, duration, offset, alignment, singleSided, alignToVideo);
+        appliedTo++;
+      } catch (itemErr) {
+        errors.push(String(itemErr));
+      }
+    }
+
+    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors });
+  } catch (err) {
+    return kvnJsonStringify({ appliedTo: 0, errors: [String(err)] });
+  }
+}
