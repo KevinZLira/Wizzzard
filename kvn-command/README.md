@@ -101,35 +101,77 @@ research (cited above), not derived from that package's code.
 
 ## Opening the window
 
-There is no built-in global hotkey. Two real options exist, and neither
-is a "fake it" workaround:
+There's no way for a CEP extension to register a true OS-global hotkey
+by itself, and Premiere's own Keyboard Shortcuts editor doesn't expose
+individual extensions as bindable commands either (confirmed by testing
+— searching "KVN Command" or "extension" there finds nothing, only the
+generic "Find Extensions on Exchange..." item). Three real options,
+increasing in setup effort:
 
 1. **Window ▸ Extensions ▸ KVN Command**, every time. Works today, no
    setup.
-2. **A genuinely global OS-level hotkey is technically possible** for a
-   CEP extension: bundle a second, invisible "background" CEP extension
-   (`AutoVisible: false`) that runs continuously with Node.js integration
-   enabled (`--enable-nodejs`), and have it load a native Node
-   global-hotkey-listening addon, then message the main window to show
-   itself. This is a documented CEP capability (Node integration in
-   mixed-context extensions), not something invented here — but a native
-   addon has to be compiled against the exact Node/Chromium ABI Premiere's
-   CEP runtime embeds, which is brittle and genuinely needs a real
-   Premiere install to build and verify against. It was **not**
-   implemented in this pass rather than shipped unverified; the manifest
-   and file layout don't block adding a `bg` extension for this later.
+2. **Bind the OS's own menu-item shortcut feature to open it** — no
+   extra moving parts, but macOS-only and depends on the exact menu text:
+   **System Settings ▸ Keyboard ▸ Keyboard Shortcuts ▸ App Shortcuts ▸ +**,
+   Application: Adobe Premiere Pro, Menu Title: `KVN Command` (exactly as
+   it reads under Window ▸ Extensions), then set the key combo.
+3. **A genuinely global hotkey, on both platforms** — this is what's
+   actually implemented, via `client/bg/`: a second, invisible companion
+   CEP extension (`com.kvn.command.bg`, `AutoVisible: true`) that starts
+   automatically with Premiere and runs a plain Node.js `http` server
+   (no native addon, nothing to compile — just Node's built-in `http`
+   module) on `127.0.0.1:51234`. Hitting `GET /open` calls the native
+   `window.__adobe_cep__.requestOpenExtension("com.kvn.command.main", "")`
+   binding, which opens/focuses the real KVN Command window. An external
+   tool sends that request when your OS-level hotkey fires:
+   - **Windows (AutoHotkey):**
+     ```ahk
+     ^!k::  ; Ctrl+Alt+K — change to whatever combo you want
+     UrlDownloadToFile, http://127.0.0.1:51234/open, %A_Temp%\kvn-open.tmp
+     return
+     ```
+     Run the `.ahk` script (AutoHotkey must be installed); put it in your
+     Startup folder to have it always running.
+   - **macOS (Automator Quick Action):** Automator ▸ New Document ▸ Quick
+     Action ▸ set "Workflow receives" to *no input* in *any application* ▸
+     add a **Run Shell Script** action with:
+     ```sh
+     curl -s http://127.0.0.1:51234/open
+     ```
+     Save it (e.g. as "Open KVN Command"), then in **System Settings ▸
+     Keyboard ▸ Keyboard Shortcuts ▸ Services**, find it and assign a key
+     combo.
 
-The "Shortcut reminder" field in Settings is exactly that — a label next
-to the search box, not a binding. It's honest about this in the panel
-itself, not just in this doc.
+   This pattern — a local HTTP server inside a CEP extension, triggered
+   externally by AutoHotkey — mirrors a real, working open-source project
+   doing the same bridging
+   ([sebinside/AHK2PremiereCEP](https://github.com/sebinside/AHK2PremiereCEP)),
+   not something invented from scratch. `requestOpenExtension` is
+   documented Adobe CEP behavior. What's **not** independently verified
+   yet: that `AutoVisible: true` on a `Custom`-type extension with a tiny
+   (10×10) window is enough to keep it running invisibly without an
+   empty window becoming visible/annoying — the manifest sets it up this
+   way as the reasonable first attempt, but confirm this in practice and
+   adjust geometry/behavior if a stray window shows up.
+
+The "Shortcut reminder" field in Settings is still just a label next to
+the search box, unconnected to any of the above — it doesn't know which
+option (if any) you've actually set up.
 
 ## Architecture
 
 ```
-CSXS/manifest.xml         CEP manifest — one "Custom" (floating) extension
+CSXS/manifest.xml         CEP manifest — two extensions: the visible
+                           "Custom" (floating) command palette, and an
+                           invisible companion for the global hotkey bridge
 host/ppro.jsx              ExtendScript host — the ONLY file that touches
                             Premiere's scripting DOM/QE DOM directly
 icons/*.png                 Flat placeholder squares — swap for KVN's mark
+client/bg/
+  index.html, app.js        Invisible companion extension: a plain Node
+                             http server (no native addon) that an
+                             external hotkey tool hits to open the real
+                             window — see "Opening the window" below
 client/main/
   index.html                Loads css + js/*.js in dependency order
   css/palette.css            KVN visual identity: #080909 bg, off-white
