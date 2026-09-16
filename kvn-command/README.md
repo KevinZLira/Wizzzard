@@ -266,6 +266,27 @@ extensions directory:
 - macOS: `~/Library/Application Support/Adobe/CEP/extensions/`
 - Windows: `%APPDATA%\Adobe\CEP\extensions\`
 
+### Live debugging (Chrome DevTools)
+
+With `PlayerDebugMode` enabled, CEP also opens a remote-debugging port
+per extension, declared in `.debug` at the extension root (already
+included in this repo — `com.kvn.command.main` on port 8088,
+`com.kvn.command.bg` on 8089). After Premiere is running with the
+extension loaded:
+
+1. Open **Chrome** (not Safari — this is CEF's own remote-debugging
+   protocol, which Chrome speaks natively) and go to
+   `http://localhost:8089` (or 8088 for the main window).
+2. Click through to the listed page to get a real DevTools console —
+   this shows actual thrown errors, `console.log`/`console.error`
+   output, and lets you run expressions (e.g. `require("./native/uiohook-loader.js")`)
+   directly in that extension's live context, instead of round-tripping
+   through curl endpoints one hypothesis at a time.
+
+This is the fastest way to debug `client/bg/app.js`, since that
+extension's own window is normally invisible by design (see "Opening
+the window" above).
+
 Restart Premiere Pro, then **Window ▸ Extensions ▸ KVN Command**.
 
 ## What's implemented
