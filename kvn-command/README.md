@@ -138,6 +138,8 @@ increasing in setup effort:
      ```sh
      curl -s http://127.0.0.1:51234/open
      ```
+     Suggested combo when assigning the shortcut: `Ctrl+Cmd+K` — plain
+     `Cmd+K` is already Premiere's own Cut shortcut.
      Save it (e.g. as "Open KVN Command"), then in **System Settings ▸
      Keyboard ▸ Keyboard Shortcuts ▸ Services**, find it and assign a key
      combo.

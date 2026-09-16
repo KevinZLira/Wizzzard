@@ -17,7 +17,7 @@ window.KVN.Store = (function () {
     showRecent: true,
     showAudioEffects: true,
     showHiddenEffects: false,
-    shortcutHint: "Cmd/Ctrl + K", // reminder label only, see README re: no true global shortcut
+    shortcutHint: "Ctrl+Cmd+K", // reminder label only — Cmd+K alone is Premiere's own Cut shortcut; see README re: the real bg-extension hotkey setup
   };
 
   var MAX_RECENT = 12;

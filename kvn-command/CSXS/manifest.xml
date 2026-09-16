@@ -103,6 +103,13 @@
                             <Height>80</Height>
                         </Size>
                     </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./icons/plugin-icon.png</Icon>
+                        <Icon Type="RollOver">./icons/plugin-icon.png</Icon>
+                        <Icon Type="Disabled">./icons/plugin-icon.png</Icon>
+                        <Icon Type="DarkNormal">./icons/dark.png</Icon>
+                        <Icon Type="DarkRollOver">./icons/dark.png</Icon>
+                    </Icons>
                 </UI>
             </DispatchInfo>
         </Extension>
