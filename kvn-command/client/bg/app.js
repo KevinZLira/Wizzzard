@@ -25,6 +25,16 @@ var PORT = 51234;
 var HOST = "127.0.0.1";
 var MAIN_EXTENSION_ID = "com.kvn.command.main";
 
+// KILL SWITCH: after bundling the native uiohook-napi addon, the whole bg
+// extension window stopped appearing at all (not even the static HTML),
+// on both a menu-triggered manual open and presumably auto-start. A JS
+// try/catch cannot catch a native crash (segfault) — if requiring or
+// starting that addon crashes the process, the entire renderer disappears
+// with it, which matches the symptom exactly. Defaulting this to false
+// restores the working bg extension (HTTP bridge only) while the native
+// addon is debugged in isolation. Flip to true only for that debugging.
+var ENABLE_GLOBAL_HOTKEY = false;
+
 function openMainWindow() {
   if (!window.__adobe_cep__ || typeof window.__adobe_cep__.requestOpenExtension !== "function") {
     throw new Error("window.__adobe_cep__.requestOpenExtension is unavailable in this CEP host.");
@@ -43,7 +53,7 @@ function setHotkeyStatus(text, isError) {
   hotkeyStatusEl.style.color = isError ? "#ff5c5c" : "#7cff00";
 }
 
-(function initGlobalHotkey() {
+function initGlobalHotkey() {
   var uiohook;
   try {
     uiohook = require("./native/uiohook-loader.js");
@@ -91,7 +101,13 @@ function setHotkeyStatus(text, isError) {
     console.error("[KVN Command BG] Failed to start uiohook:", err);
     setHotkeyStatus("Global shortcut failed to start.", true);
   }
-})();
+}
+
+if (ENABLE_GLOBAL_HOTKEY) {
+  initGlobalHotkey();
+} else {
+  setHotkeyStatus("Global shortcut disabled (debugging a native-addon startup crash).", true);
+}
 
 var server = http.createServer(function (req, res) {
   if (req.url === "/open") {
@@ -110,6 +126,24 @@ var server = http.createServer(function (req, res) {
   if (req.url === "/ping") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("kvn-command-bg alive, node " + process.version);
+    return;
+  }
+
+  // Debug-only: trigger the native addon load on demand, after the window
+  // is already open and responding, instead of at page-load time. If this
+  // request never gets a response (curl hangs / connection drops) while
+  // the bg window disappears, that confirms a native crash rather than a
+  // catchable JS error — a JS error here would still return a 500 below.
+  if (req.url === "/enable-hotkey") {
+    try {
+      initGlobalHotkey();
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("hotkey init attempted, check the bg window's status line");
+    } catch (err) {
+      console.error("[KVN Command BG] initGlobalHotkey threw:", err);
+      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.end("error: " + (err && err.message ? err.message : String(err)));
+    }
     return;
   }
 
