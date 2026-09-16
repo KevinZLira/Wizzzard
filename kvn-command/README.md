@@ -102,63 +102,67 @@ research (cited above), not derived from that package's code.
 ## Opening the window
 
 There's no way for a CEP extension to register a true OS-global hotkey
-by itself, and Premiere's own Keyboard Shortcuts editor doesn't expose
-individual extensions as bindable commands either (confirmed by testing
-— searching "KVN Command" or "extension" there finds nothing, only the
-generic "Find Extensions on Exchange..." item). Three real options,
-increasing in setup effort:
+through any *documented* Adobe API, and Premiere's own Keyboard Shortcuts
+editor doesn't expose individual extensions as bindable commands either
+(confirmed by testing — searching "KVN Command" or "extension" there
+finds nothing, only the generic "Find Extensions on Exchange..." item).
 
-1. **Window ▸ Extensions ▸ KVN Command**, every time. Works today, no
-   setup.
-2. **Bind the OS's own menu-item shortcut feature to open it** — no
-   extra moving parts, but macOS-only and depends on the exact menu text:
-   **System Settings ▸ Keyboard ▸ Keyboard Shortcuts ▸ App Shortcuts ▸ +**,
-   Application: Adobe Premiere Pro, Menu Title: `KVN Command` (exactly as
-   it reads under Window ▸ Extensions), then set the key combo.
-3. **A genuinely global hotkey, on both platforms** — this is what's
-   actually implemented, via `client/bg/`: a second, invisible companion
-   CEP extension (`com.kvn.command.bg`, `AutoVisible: true`) that starts
-   automatically with Premiere and runs a plain Node.js `http` server
-   (no native addon, nothing to compile — just Node's built-in `http`
-   module) on `127.0.0.1:51234`. Hitting `GET /open` calls the native
-   `window.__adobe_cep__.requestOpenExtension("com.kvn.command.main", "")`
-   binding, which opens/focuses the real KVN Command window. An external
-   tool sends that request when your OS-level hotkey fires:
-   - **Windows (AutoHotkey):**
-     ```ahk
-     ^!k::  ; Ctrl+Alt+K — change to whatever combo you want
-     UrlDownloadToFile, http://127.0.0.1:51234/open, %A_Temp%\kvn-open.tmp
-     return
-     ```
-     Run the `.ahk` script (AutoHotkey must be installed); put it in your
-     Startup folder to have it always running.
-   - **macOS (Automator Quick Action):** Automator ▸ New Document ▸ Quick
-     Action ▸ set "Workflow receives" to *no input* in *any application* ▸
-     add a **Run Shell Script** action with:
-     ```sh
-     curl -s http://127.0.0.1:51234/open
-     ```
-     Suggested combo when assigning the shortcut: `Ctrl+Cmd+K` — plain
-     `Cmd+K` is already Premiere's own Cut shortcut.
-     Save it (e.g. as "Open KVN Command"), then in **System Settings ▸
-     Keyboard ▸ Keyboard Shortcuts ▸ Services**, find it and assign a key
-     combo.
+**What's implemented is a genuinely global hotkey, on both platforms,
+using only Premiere + this plugin — no external app, no manual OS
+Settings configuration required.** `client/bg/` is a second, invisible
+companion CEP extension (`com.kvn.command.bg`) that starts with Premiere
+(`AutoVisible: false` + `<StartOn>` the `AppOnline` event — the correct
+pattern for an always-running `Custom`-type extension; `AutoVisible: true`
+alone only reliably auto-launches `Panel`-type extensions) and, with
+Node.js enabled via `--enable-nodejs --mixed-context`, loads a bundled
+native addon that installs a real OS-level global keyboard hook:
+[`uiohook-napi`](https://github.com/SnosMe/uiohook-napi) (MIT-licensed
+N-API bindings for libuiohook). Prebuilt binaries for `darwin-arm64`,
+`darwin-x64`, `win32-x64`, and `win32-arm64` are bundled directly under
+`client/bg/native/prebuilds/` (Node-API is ABI-stable, so these run
+unmodified across Node major versions — no compilation step, ever,
+for any user). `client/bg/native/uiohook-loader.js` is a small
+dependency-free loader that picks the right binary for
+`process.platform`/`process.arch` and re-exposes the same
+event-emitter API as the upstream package (no `node-gyp-build`
+dependency needed, since there's no real `node_modules` resolution
+happening inside a CEP extension folder).
 
-   This pattern — a local HTTP server inside a CEP extension, triggered
-   externally by AutoHotkey — mirrors a real, working open-source project
-   doing the same bridging
-   ([sebinside/AHK2PremiereCEP](https://github.com/sebinside/AHK2PremiereCEP)),
-   not something invented from scratch. `requestOpenExtension` is
-   documented Adobe CEP behavior. What's **not** independently verified
-   yet: that `AutoVisible: true` on a `Custom`-type extension with a tiny
-   (10×10) window is enough to keep it running invisibly without an
-   empty window becoming visible/annoying — the manifest sets it up this
-   way as the reasonable first attempt, but confirm this in practice and
-   adjust geometry/behavior if a stray window shows up.
+`client/bg/app.js` listens for `keydown` events from the hook and checks
+for `Ctrl+Cmd+K` (mac) / `Ctrl+Win+K` (Windows) — matching `metaKey`
+(Cmd/Win) + `ctrlKey` + the `K` keycode, all resolved for us by
+uiohook-napi itself. On a match it calls the native
+`window.__adobe_cep__.requestOpenExtension("com.kvn.command.main", "")`
+binding, which opens/focuses the real KVN Command window.
+
+The bg extension's window also still runs the plain Node `http` server
+from earlier iterations (`GET /ping`, `GET /open` on
+`127.0.0.1:51234`) — kept only because it's a trivial, addon-free way to
+confirm the extension is alive while testing; it's not required for the
+hotkey to work.
+
+**Not yet independently confirmed in a live Premiere install:** that the
+`AutoVisible: false` + `StartOn AppOnline` combination actually launches
+`com.kvn.command.bg` at Premiere startup without any manual step. Until
+that's confirmed, the manifest keeps a temporary `<Menu>KVN Command
+(background)</Menu>` entry so it can still be opened by hand from
+**Window ▸ Extensions** for testing — remove that entry once auto-start
+is verified. Also not yet live-tested: that the bundled `.node` binary
+actually loads and the hook actually fires inside Premiere's real CEP/CEF
+Node runtime (only verified so far by inspecting the published npm
+package's contents and Node-API's documented ABI-stability guarantees,
+not by an actual keypress in Premiere).
+
+If the native hook ever fails to load on a given machine (unsupported
+platform/arch, or the binary doesn't load for some other reason), the bg
+extension degrades gracefully: it logs the failure, shows it in the bg
+window (`#hotkey-status`), and falls back to **Window ▸ Extensions ▸ KVN
+Command** as the manual way to open the palette — it does not crash the
+extension or block the effects/transitions search-and-apply features.
 
 The "Shortcut reminder" field in Settings is still just a label next to
-the search box, unconnected to any of the above — it doesn't know which
-option (if any) you've actually set up.
+the search box (`Ctrl+Cmd+K`), unconnected to the actual hook — it's a
+reminder, not a rebind control.
 
 ## Architecture
 
@@ -170,10 +174,20 @@ host/ppro.jsx              ExtendScript host — the ONLY file that touches
                             Premiere's scripting DOM/QE DOM directly
 icons/*.png                 Flat placeholder squares — swap for KVN's mark
 client/bg/
-  index.html, app.js        Invisible companion extension: a plain Node
-                             http server (no native addon) that an
-                             external hotkey tool hits to open the real
-                             window — see "Opening the window" below
+  index.html, app.js        Invisible companion extension: installs a
+                             real OS-global keyboard hook (bundled
+                             uiohook-napi native addon) that opens the
+                             real window on Ctrl+Cmd/Win+K, plus a plain
+                             Node http server kept for manual debugging
+                             — see "Opening the window" below
+  native/
+    uiohook-loader.js        Dependency-free loader: picks the right
+                              prebuilt binary for process.platform/arch
+                              and re-exposes uiohook-napi's event API
+    prebuilds/<platform-arch>/uiohook-napi.node
+                              Bundled prebuilt native addons (mac +
+                              Windows only — Premiere doesn't ship for
+                              Linux), no compilation needed for any user
 client/main/
   index.html                Loads css + js/*.js in dependency order
   css/palette.css            KVN visual identity: #080909 bg, off-white
@@ -274,8 +288,10 @@ your Premiere has them, same as any effect not in `effects-metadata.js`.
 
 ## What's intentionally NOT implemented yet
 
-- A real global OS-level hotkey (see "Opening the window" above — the
-  path is understood, not shipped unverified).
+- Rebinding the global shortcut from the UI — it's hardcoded to
+  Ctrl+Cmd+K (mac) / Ctrl+Win+K (Windows) in `client/bg/app.js`; see
+  "Opening the window" above for how the hook itself works and what's
+  still unconfirmed live.
 - Reading/applying user-imported **effect presets** (`.prfpset` files) —
   confirmed via Adobe community reports that these do not appear in
   `getVideoEffectList()` at all, so they're invisible to this plugin's

@@ -68,12 +68,13 @@
             </DispatchInfo>
         </Extension>
 
-        <!-- Invisible companion extension: hosts a local HTTP server
-             (client/bg/app.js) so an OS-level global hotkey (via
-             AutoHotkey on Windows, an Automator Quick Action on macOS)
-             can tell this extension to open/focus the real KVN Command
-             window above, via window.__adobe_cep__.requestOpenExtension().
-             See README "Opening the window" for setup. -->
+        <!-- Invisible companion extension: installs a real OS-global
+             keyboard hook (client/bg/native, bundled uiohook-napi) so
+             Ctrl+Cmd/Win+K opens/focuses the real KVN Command window
+             above, via window.__adobe_cep__.requestOpenExtension() —
+             no external app or OS Settings configuration needed. Also
+             runs a plain HTTP server kept for manual debugging. See
+             README "Opening the window" for details and caveats. -->
         <Extension Id="com.kvn.command.bg">
             <DispatchInfo>
                 <Resources>
