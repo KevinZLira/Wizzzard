@@ -33,13 +33,34 @@ below for what that did and didn't involve).
   it from ExtendScript is the undocumented, unsupported "QE DOM"
   (`app.enableQE()`, then `qe.project...`), confirmed independently by
   multiple public sources (Adobe community threads, vakago-tools.com's
-  ExtendScript tutorials) — not something invented for this plugin. QE
-  track items are addressed by index, which has to line up with the
-  documented DOM's selection (see `kvnFindSelectedQeItems` in
-  `host/ppro.jsx`).
+  ExtendScript tutorials) — not something invented for this plugin.
+  Several specifics differed from those public examples on this actual
+  host and were only nailed down by direct, verified testing (a change
+  never trusted until a real before/after side effect confirmed it —
+  see `kvnFindSelectedQeItems`/`kvnApplyEffect` in `host/ppro.jsx`):
+  - QE track items are addressed by index, which doesn't line up with
+    the documented DOM's clip list directly (QE counts gaps between
+    clips as items too). Matching by the two DOMs' respective time
+    values didn't work — QE's item `.start` is a different object
+    ("QETime") than the documented `TickTime`, and no shared unit was
+    found between them. Matching by **ordinal position** instead (the
+    Nth real clip in the documented list is the Nth non-"Empty" QE item
+    on that track) works and needs no field-value guessing at all.
+  - Several QE objects (effect list entries, track items) don't expose
+    their real fields as normal enumerable/direct-access properties —
+    some only work through `.toJSON()`, and even that can return a bare
+    string (a localized display name) rather than an object.
+  - `matchName` is not obtainable from this host's effect list at all —
+    `displayName` is what's actually used throughout, including to look
+    up and apply the effect.
+  - `getVideoEffectByName`/`getAudioEffectByName`'s second argument
+    means "treat the name as a matchName": passing `true` with a display
+    name silently returns a non-functional stub object (no error) rather
+    than the real effect, so this always calls it with `false`.
 - **Video effect enumeration/application**
   (`getVideoEffectList`/`getVideoEffectByName`/`addVideoEffect`) is
-  confirmed by those same sources. **Audio's mirror**
+  confirmed working end-to-end, verified by applying a real effect and
+  checking the clip's own `.components` count changed. **Audio's mirror**
   (`getAudioEffectList`/`getAudioEffectByName`/`addAudioEffect`) is
   plausible by symmetry but NOT independently confirmed — so every audio
   QE call is feature-detected with `typeof` before use. If your

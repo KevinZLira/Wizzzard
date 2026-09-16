@@ -286,54 +286,15 @@ window.addEventListener("unhandledrejection", function (event) {
       }
 
       if (state.results.length === 0) {
-        if (state.query.trim() && state.rawEffects.length > 0) {
-          // Effects DID load but nothing matched — if the sample below
-          // looks empty/garbled (blank names, "null", "undefined"), the
-          // host is returning items with a different displayName
-          // property than assumed, not that the search is broken.
-          var sample = state.rawEffects
-            .slice(0, 5)
-            .map(function (e) {
-              return '"' + e.displayName + '" (' + e.kind + ", matchName=" + e.matchName + ")";
-            })
-            .join(", ");
-          var allNameBlank = state.rawEffects.slice(0, 5).every(function (e) {
-            return !e.displayName;
-          });
-          var allMatchBlank = state.rawEffects.slice(0, 5).every(function (e) {
-            return !e.matchName;
-          });
-          var debugInfo = catalog.getLastDebug();
-          var extra = "";
-          if (allNameBlank && debugInfo) {
-            if (debugInfo.firstVideoItemKeys) extra += " | Keys: " + debugInfo.firstVideoItemKeys.join(", ");
-            if (debugInfo.firstVideoItemData) extra += " | Data: " + JSON.stringify(debugInfo.firstVideoItemData);
-          }
-          if (allMatchBlank && debugInfo) {
-            if (debugInfo.firstVideoItemReflectProperties) {
-              extra += " | Reflect props: " + debugInfo.firstVideoItemReflectProperties.join(", ");
-            }
-            if (debugInfo.firstVideoItemReflectMethods) {
-              extra += " | Reflect methods: " + debugInfo.firstVideoItemReflectMethods.join(", ");
-            }
-          }
-          resultsEl.appendChild(
-            el("div", "kvn-context-banner", [
-              el("strong", null, 'NO MATCH FOR "' + state.query + '"'),
-              state.rawEffects.length + " effects loaded. First few: " + sample + extra,
-            ])
-          );
-        } else {
-          resultsEl.appendChild(
-            el(
-              "div",
-              "kvn-empty",
-              state.query.trim()
-                ? 'No effects found for "' + state.query + '".'
-                : "Start typing to search video and audio effects."
-            )
-          );
-        }
+        resultsEl.appendChild(
+          el(
+            "div",
+            "kvn-empty",
+            state.query.trim()
+              ? 'No effects found for "' + state.query + '".'
+              : "Start typing to search video and audio effects."
+          )
+        );
         return;
       }
 
@@ -440,22 +401,17 @@ window.addEventListener("unhandledrejection", function (event) {
         if (result.appliedTo > 0) {
           state.userState = store.pushRecent(state.userState, effect.id);
           showToast(toastEl, "Applied " + effect.displayName, false);
-          // Verification debug (before/after component counts) matters
-          // here too — a prior round showed appliedTo>0 with nothing
-          // actually landing on the clip, so "success" isn't proven yet.
-          // Don't auto-clear the query this time so the debug stays
-          // visible instead of disappearing after 900ms.
-          if (result.debug) {
-            showApplyDebug(result.debug);
-          } else {
-            setTimeout(function () {
-              state.query = "";
-              if (input) input.value = "";
-              computeResults();
-              renderResultsInto(rootEl.querySelector(".kvn-results"));
-              if (input) input.focus();
-            }, 900);
-          }
+          // Wait for the toast to actually be seen before clearing the
+          // query — clearing immediately shrinks the window (see
+          // scheduleResize()) out from under a toast that's positioned
+          // relative to the now-gone results area.
+          setTimeout(function () {
+            state.query = "";
+            if (input) input.value = "";
+            computeResults();
+            renderResultsInto(rootEl.querySelector(".kvn-results"));
+            if (input) input.focus();
+          }, 900);
         } else {
           var reason = result.errors[0] || "Effect could not be applied.";
           showToast(toastEl, "Could not apply: " + reason, true);

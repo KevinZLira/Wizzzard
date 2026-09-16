@@ -376,8 +376,16 @@ function kvnFindSelectedQeItems(kind, debugOut) {
 }
 
 /**
- * Applies one effect (by matchName) to every currently selected clip of
- * the given kind. Returns { appliedTo, errors: [string] } as JSON.
+ * Applies one effect (by displayName — matchName is never resolvable off
+ * this host's effect list, see kvnListEffects) to every currently
+ * selected clip of the given kind. Returns { appliedTo, errors } as JSON.
+ *
+ * getVideoEffectByName/getAudioEffectByName's second argument means
+ * "treat name as a matchName": confirmed by testing against the real
+ * clip's component count (via the documented, non-QE .components
+ * collection) that `true` silently returns a near-empty, non-functional
+ * stub object when given a display name instead of throwing, while
+ * `false` returns the real, usable effect.
  */
 function kvnApplyEffect(effectName, kind) {
   try {
@@ -396,130 +404,32 @@ function kvnApplyEffect(effectName, kind) {
       return kvnJsonStringify({ appliedTo: 0, errors: ["NO_MATCHING_TARGET"], debug: debug });
     }
 
-    // matchName was never resolvable — this is called with displayName
-    // instead. The before/after component-count check showed
-    // addVideoEffect() reporting no error yet adding nothing, which
-    // means the "effect" object handed to it likely isn't a real,
-    // usable effect even though it's truthy — introspect it directly
-    // rather than assume, and try both boolean values for the second
-    // arg (public examples only showed `true`; its actual meaning was
-    // never confirmed — could be "isMatchName" and we're passing a
-    // display name while claiming otherwise).
-    var effectTrue =
-      kind === "video" ? qe.project.getVideoEffectByName(effectName, true) : qe.project.getAudioEffectByName(effectName, true);
-    var effectFalse =
+    var effect =
       kind === "video"
         ? qe.project.getVideoEffectByName(effectName, false)
         : qe.project.getAudioEffectByName(effectName, false);
 
-    function kvnDescribeEffectLookup(candidate) {
-      var info = { type: typeof candidate, isTruthy: !!candidate };
-      if (candidate) {
-        var keys = [];
-        for (var k in candidate) keys.push(k);
-        info.enumerableKeys = keys;
-        if (typeof candidate.toJSON === "function") {
-          try {
-            info.toJsonValue = candidate.toJSON();
-          } catch (e5) {
-            info.toJsonValue = "threw: " + String(e5);
-          }
-        }
-        if (candidate.reflect) {
-          var rProps = [];
-          if (candidate.reflect.properties) {
-            for (var rp2 = 0; rp2 < candidate.reflect.properties.length; rp2++) rProps.push(String(candidate.reflect.properties[rp2]));
-          }
-          info.reflectProperties = rProps;
-        }
-      }
-      return info;
+    if (!effect) {
+      return kvnJsonStringify({ appliedTo: 0, errors: ['Effect "' + effectName + '" not found.'] });
     }
 
-    debug.effectLookupTrue = kvnDescribeEffectLookup(effectTrue);
-    debug.effectLookupFalse = kvnDescribeEffectLookup(effectFalse);
+    var appliedTo = 0;
+    var errors = [];
 
-    if (!effectTrue && !effectFalse) {
-      return kvnJsonStringify({
-        appliedTo: 0,
-        errors: ['getVideoEffectByName/getAudioEffectByName("' + effectName + '") returned nothing for either boolean value.'],
-        debug: debug,
-      });
-    }
-
-    function kvnReadComponentCount(docClip) {
-      try {
-        return docClip.components.numItems;
-      } catch (e6) {
-        return "unreadable: " + String(e6);
-      }
-    }
-
-    function kvnTryAddEffect(docClip, qeItem, candidate) {
-      var before = kvnReadComponentCount(docClip);
-      var caught = null;
+    for (var i = 0; i < targets.length; i++) {
       try {
         if (kind === "video") {
-          qeItem.addVideoEffect(candidate);
+          targets[i].qeItem.addVideoEffect(effect);
         } else {
-          qeItem.addAudioEffect(candidate);
+          targets[i].qeItem.addAudioEffect(effect);
         }
-      } catch (e7) {
-        caught = String(e7);
-      }
-      var after = kvnReadComponentCount(docClip);
-      var worked = typeof before === "number" && typeof after === "number" && after > before;
-      return { before: before, after: after, worked: worked, error: caught };
-    }
-
-    // The looked-up "effect" objects only expose a bare "name" property
-    // (see effectLookupTrue/False above) — too little structure to trust
-    // as a real, applyable effect reference. Rather than bet on one
-    // candidate, try several against the FIRST target only, verifying
-    // via the real component count each time, and use whichever one
-    // actually works for the rest.
-    var candidates = [
-      { label: "effectTrue (object)", value: effectTrue },
-      { label: "effectFalse (object)", value: effectFalse },
-      { label: "raw effectName string", value: effectName },
-    ];
-
-    var firstTarget = targets[0];
-    var candidateResults = [];
-    var winningCandidate = null;
-
-    for (var ci = 0; ci < candidates.length; ci++) {
-      if (!candidates[ci].value) {
-        candidateResults.push({ label: candidates[ci].label, skipped: "falsy, not attempted" });
-        continue;
-      }
-      var attempt = kvnTryAddEffect(firstTarget.docClip, firstTarget.qeItem, candidates[ci].value);
-      candidateResults.push({ label: candidates[ci].label, before: attempt.before, after: attempt.after, worked: attempt.worked, error: attempt.error });
-      if (attempt.worked && !winningCandidate) {
-        winningCandidate = candidates[ci].value;
-      }
-    }
-
-    debug.candidateResults = candidateResults;
-
-    if (!winningCandidate) {
-      return kvnJsonStringify({ appliedTo: 0, errors: ["None of the candidate effect references actually changed the clip's component count."], debug: debug });
-    }
-
-    // First target is already done (that's how we found the winner);
-    // apply the same winning candidate to any remaining targets.
-    var appliedTo = 1;
-    var errors = [];
-    for (var i = 1; i < targets.length; i++) {
-      var attempt2 = kvnTryAddEffect(targets[i].docClip, targets[i].qeItem, winningCandidate);
-      if (attempt2.worked) {
         appliedTo++;
-      } else {
-        errors.push(attempt2.error || "Component count didn't change.");
+      } catch (itemErr) {
+        errors.push(String(itemErr));
       }
     }
 
-    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors, debug: debug });
+    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors });
   } catch (err) {
     return kvnJsonStringify({ appliedTo: 0, errors: [String(err)] });
   }
