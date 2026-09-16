@@ -67,6 +67,9 @@ window.addEventListener("unhandledrejection", function (event) {
     var transitionsCatalog = window.KVN.TransitionsCatalog;
     var isPreview = !window.__adobe_cep__;
 
+    // Verified working end-to-end against a real host (search + apply).
+    var TRANSITIONS_ENABLED = true;
+
     var state = {
       query: "",
       results: [],
@@ -138,10 +141,13 @@ window.addEventListener("unhandledrejection", function (event) {
       // Effects and transitions are two different host APIs (see
       // premiere-bridge.js/transitions-catalog.js) but share one search
       // pool — each entry carries `type` ("effect"/"transition") so
-      // applyActive() knows which apply call to make.
-      var pool = catalog.buildSearchPool(state.rawEffects, poolOpts).concat(
-        transitionsCatalog.buildSearchPool(state.rawTransitions, poolOpts)
-      );
+      // applyActive() knows which apply call to make. Transitions are
+      // shelved for now (TRANSITIONS_ENABLED) — not merged in until
+      // kvnApplyTransition is verified working on a real host.
+      var pool = catalog.buildSearchPool(state.rawEffects, poolOpts);
+      if (TRANSITIONS_ENABLED) {
+        pool = pool.concat(transitionsCatalog.buildSearchPool(state.rawTransitions, poolOpts));
+      }
 
       var kind = state.context.kind;
       var boosted = pool.map(function (e) {
@@ -183,11 +189,13 @@ window.addEventListener("unhandledrejection", function (event) {
         console.error("[KVN Command] Failed to load host effects:", err);
         state.rawEffects = [];
       }
-      try {
-        state.rawTransitions = await transitionsCatalog.loadRawTransitions(opts || {});
-      } catch (err) {
-        console.error("[KVN Command] Failed to load host transitions:", err);
-        state.rawTransitions = [];
+      if (TRANSITIONS_ENABLED) {
+        try {
+          state.rawTransitions = await transitionsCatalog.loadRawTransitions(opts || {});
+        } catch (err) {
+          console.error("[KVN Command] Failed to load host transitions:", err);
+          state.rawTransitions = [];
+        }
       }
       state.loading = false;
     }
