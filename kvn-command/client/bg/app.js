@@ -25,14 +25,19 @@ var PORT = 51234;
 var HOST = "127.0.0.1";
 var MAIN_EXTENSION_ID = "com.kvn.command.main";
 
-// KILL SWITCH: after bundling the native uiohook-napi addon, the whole bg
-// extension window stopped appearing at all (not even the static HTML),
-// on both a menu-triggered manual open and presumably auto-start. A JS
-// try/catch cannot catch a native crash (segfault) — if requiring or
-// starting that addon crashes the process, the entire renderer disappears
-// with it, which matches the symptom exactly. Defaulting this to false
-// restores the working bg extension (HTTP bridge only) while the native
-// addon is debugged in isolation. Flip to true only for that debugging.
+// KILL SWITCH, now confirmed NOT a native crash: calling initGlobalHotkey()
+// on demand via /enable-hotkey (after the bg extension is already up and
+// running invisibly, auto-started by StartOn AppOnline) returns a normal
+// 200 and doesn't kill the HTTP server, so the addon loads/starts without
+// crashing the process. The earlier "window never appears" symptom was a
+// red herring: AutoVisible=false + StartOn AppOnline means the bg window
+// is *never supposed to become visible* — it was never a rendering crash.
+// Keeping this flag (default false, flip via /enable-hotkey per session
+// or set true here once the physical Ctrl+Cmd+K keypress is confirmed
+// working end-to-end) while pinning down whether the hook actually FIRES
+// (most likely candidate: macOS Input Monitoring / Accessibility
+// permission for Premiere/CEPHtmlEngine, which a background helper
+// process may not get auto-prompted for).
 var ENABLE_GLOBAL_HOTKEY = false;
 
 function openMainWindow() {
@@ -45,8 +50,10 @@ function openMainWindow() {
 // --- Global keyboard shortcut (uiohook-napi) --------------------------
 
 var hotkeyStatusEl = null;
+var lastHotkeyStatus = "not initialized";
 
 function setHotkeyStatus(text, isError) {
+  lastHotkeyStatus = text;
   if (!hotkeyStatusEl) hotkeyStatusEl = document.getElementById("hotkey-status");
   if (!hotkeyStatusEl) return;
   hotkeyStatusEl.textContent = text;
@@ -126,6 +133,14 @@ var server = http.createServer(function (req, res) {
   if (req.url === "/ping") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("kvn-command-bg alive, node " + process.version);
+    return;
+  }
+
+  // Reads the same status text the (normally invisible) bg window's
+  // #hotkey-status line would show, without needing to open that window.
+  if (req.url === "/status") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end(lastHotkeyStatus);
     return;
   }
 
