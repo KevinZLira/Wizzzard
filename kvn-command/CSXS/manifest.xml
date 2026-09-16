@@ -90,10 +90,17 @@
                 </Lifecycle>
                 <UI>
                     <Type>Custom</Type>
+                    <!-- TEMPORARY: giving this a <Menu> entry so it can be
+                         opened manually via Window > Extensions, to test
+                         whether AutoVisible actually auto-launches a
+                         Custom-type extension at all, or whether it only
+                         applies to Panel-type ones. Remove once confirmed
+                         either way. -->
+                    <Menu>KVN Command (background)</Menu>
                     <Geometry>
                         <Size>
-                            <Width>10</Width>
-                            <Height>10</Height>
+                            <Width>200</Width>
+                            <Height>80</Height>
                         </Size>
                     </Geometry>
                 </UI>
