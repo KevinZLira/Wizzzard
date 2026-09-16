@@ -396,23 +396,54 @@ function kvnApplyEffect(effectName, kind) {
       return kvnJsonStringify({ appliedTo: 0, errors: ["NO_MATCHING_TARGET"], debug: debug });
     }
 
-    // matchName was never resolvable (the effect list items only expose
-    // it, if at all, through toJSON() as a bare display-name string with
-    // no separate matchName field) — so this is called with the
-    // (confirmed-working) displayName instead. getVideoEffectByName's
-    // public example usage passes a matchName-shaped string, but the
-    // function may just do a name lookup regardless of which kind of
-    // name it is; if not, this will surface as its own clear error here.
-    var effect =
+    // matchName was never resolvable — this is called with displayName
+    // instead. The before/after component-count check showed
+    // addVideoEffect() reporting no error yet adding nothing, which
+    // means the "effect" object handed to it likely isn't a real,
+    // usable effect even though it's truthy — introspect it directly
+    // rather than assume, and try both boolean values for the second
+    // arg (public examples only showed `true`; its actual meaning was
+    // never confirmed — could be "isMatchName" and we're passing a
+    // display name while claiming otherwise).
+    var effectTrue =
+      kind === "video" ? qe.project.getVideoEffectByName(effectName, true) : qe.project.getAudioEffectByName(effectName, true);
+    var effectFalse =
       kind === "video"
-        ? qe.project.getVideoEffectByName(effectName, true)
-        : qe.project.getAudioEffectByName(effectName, true);
+        ? qe.project.getVideoEffectByName(effectName, false)
+        : qe.project.getAudioEffectByName(effectName, false);
 
-    debug.effectLookupResult = typeof effect;
+    function kvnDescribeEffectLookup(candidate) {
+      var info = { type: typeof candidate, isTruthy: !!candidate };
+      if (candidate) {
+        var keys = [];
+        for (var k in candidate) keys.push(k);
+        info.enumerableKeys = keys;
+        if (typeof candidate.toJSON === "function") {
+          try {
+            info.toJsonValue = candidate.toJSON();
+          } catch (e5) {
+            info.toJsonValue = "threw: " + String(e5);
+          }
+        }
+        if (candidate.reflect) {
+          var rProps = [];
+          if (candidate.reflect.properties) {
+            for (var rp2 = 0; rp2 < candidate.reflect.properties.length; rp2++) rProps.push(String(candidate.reflect.properties[rp2]));
+          }
+          info.reflectProperties = rProps;
+        }
+      }
+      return info;
+    }
+
+    debug.effectLookupTrue = kvnDescribeEffectLookup(effectTrue);
+    debug.effectLookupFalse = kvnDescribeEffectLookup(effectFalse);
+
+    var effect = effectTrue || effectFalse;
     if (!effect) {
       return kvnJsonStringify({
         appliedTo: 0,
-        errors: ['getVideoEffectByName/getAudioEffectByName("' + effectName + '") returned nothing.'],
+        errors: ['getVideoEffectByName/getAudioEffectByName("' + effectName + '") returned nothing for either boolean value.'],
         debug: debug,
       });
     }
