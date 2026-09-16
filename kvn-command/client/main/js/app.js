@@ -424,36 +424,43 @@ window.addEventListener("unhandledrejection", function (event) {
         return;
       }
 
+      function showApplyDebug(debugData) {
+        if (!debugData) return;
+        var resultsForDebug = rootEl.querySelector(".kvn-results");
+        if (resultsForDebug) {
+          resultsForDebug.appendChild(
+            el("div", "kvn-context-banner", [el("strong", null, "APPLY DEBUG"), JSON.stringify(debugData)])
+          );
+          scheduleResize();
+        }
+      }
+
       try {
         var result = await bridge.applyEffectToSelection(effect, state.context);
         if (result.appliedTo > 0) {
           state.userState = store.pushRecent(state.userState, effect.id);
           showToast(toastEl, "Applied " + effect.displayName, false);
-          // Wait for the toast to actually be seen before clearing the
-          // query — clearing immediately shrinks the window (see
-          // scheduleResize()) out from under a toast that's positioned
-          // relative to the now-gone results area.
-          setTimeout(function () {
-            state.query = "";
-            if (input) input.value = "";
-            computeResults();
-            renderResultsInto(rootEl.querySelector(".kvn-results"));
-            if (input) input.focus();
-          }, 900);
+          // Verification debug (before/after component counts) matters
+          // here too — a prior round showed appliedTo>0 with nothing
+          // actually landing on the clip, so "success" isn't proven yet.
+          // Don't auto-clear the query this time so the debug stays
+          // visible instead of disappearing after 900ms.
+          if (result.debug) {
+            showApplyDebug(result.debug);
+          } else {
+            setTimeout(function () {
+              state.query = "";
+              if (input) input.value = "";
+              computeResults();
+              renderResultsInto(rootEl.querySelector(".kvn-results"));
+              if (input) input.focus();
+            }, 900);
+          }
         } else {
           var reason = result.errors[0] || "Effect could not be applied.";
           showToast(toastEl, "Could not apply: " + reason, true);
           if (result.debug) {
-            var resultsForDebug = rootEl.querySelector(".kvn-results");
-            if (resultsForDebug) {
-              resultsForDebug.appendChild(
-                el("div", "kvn-context-banner", [
-                  el("strong", null, "APPLY DEBUG"),
-                  JSON.stringify(result.debug),
-                ])
-              );
-              scheduleResize();
-            }
+            showApplyDebug(result.debug);
           }
         }
       } catch (err) {

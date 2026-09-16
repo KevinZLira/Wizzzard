@@ -363,7 +363,11 @@ function kvnFindSelectedQeItems(kind, debugOut) {
     for (var si = 0; si < selectedDocIndexes.length; si++) {
       var docIndex = selectedDocIndexes[si];
       if (qeNonEmptyItems[docIndex]) {
-        matches.push(qeNonEmptyItems[docIndex]);
+        // Pair the QE item with its documented-DOM counterpart so the
+        // caller can verify addVideoEffect/addAudioEffect actually did
+        // something (via the documented .components collection) instead
+        // of trusting that no exception means it worked.
+        matches.push({ qeItem: qeNonEmptyItems[docIndex], docClip: docTrack.clips[docIndex] });
       }
     }
   }
@@ -415,21 +419,43 @@ function kvnApplyEffect(effectName, kind) {
 
     var appliedTo = 0;
     var errors = [];
+    var verifyInfo = [];
 
     for (var i = 0; i < targets.length; i++) {
+      var target = targets[i];
+      // Verify against the documented DOM's .components collection
+      // instead of trusting "didn't throw" — a prior round showed
+      // addVideoEffect() reporting success with nothing actually landing
+      // on the clip (Effect Controls stayed empty).
+      var beforeCount = null;
+      try {
+        beforeCount = target.docClip.components.numItems;
+      } catch (readErr) {
+        beforeCount = "unreadable: " + String(readErr);
+      }
+
       try {
         if (kind === "video") {
-          targets[i].addVideoEffect(effect);
+          target.qeItem.addVideoEffect(effect);
         } else {
-          targets[i].addAudioEffect(effect);
+          target.qeItem.addAudioEffect(effect);
         }
         appliedTo++;
       } catch (itemErr) {
         errors.push(String(itemErr));
       }
+
+      var afterCount = null;
+      try {
+        afterCount = target.docClip.components.numItems;
+      } catch (readErr2) {
+        afterCount = "unreadable: " + String(readErr2);
+      }
+
+      verifyInfo.push({ before: beforeCount, after: afterCount });
     }
 
-    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors });
+    return kvnJsonStringify({ appliedTo: appliedTo, errors: errors, debug: { verify: verifyInfo } });
   } catch (err) {
     return kvnJsonStringify({ appliedTo: 0, errors: [String(err)] });
   }
