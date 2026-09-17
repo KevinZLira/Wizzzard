@@ -8,18 +8,26 @@
  *    uiohook-napi native addon (see ./native/uiohook-loader.js) so
  *    pressing Ctrl+Win+K opens/focuses the real KVN Command window — no
  *    OS-level shortcut configuration and no external app required.
- *    Confirmed NOT possible on macOS: loading this same addon inside
- *    Premiere's process fails with a hard macOS security error
- *    (`dlopen ... different Team IDs` — hardened-runtime library
- *    validation blocks any native code not signed with Adobe's own Team
- *    ID from loading inside Premiere/CEP's process; no code change on
- *    our side can work around this without a code-signed, notarized
- *    standalone helper process, which needs an Apple Developer account
- *    we don't have here). See README "Opening the window" for the
- *    current state of the mac story.
- * 2. Hosts a plain local HTTP server via Node's built-in `http` module,
- *    kept for manual testing/debugging (`/ping`, `/open`) since it needs
- *    no native binary and is trivial to curl by hand.
+ *
+ *    Deliberately NOT attempted on macOS: confirmed via live testing
+ *    that loading this same addon inside Premiere's own process fails
+ *    with a hard macOS security error (`dlopen ... different Team IDs`)
+ *    — hardened-runtime library validation blocks any native code not
+ *    signed with Adobe's own Team ID from loading inside Premiere/CEP's
+ *    process. This is an OS-level restriction, not a bug in this addon
+ *    or its loader, and no code change here can work around it. (For
+ *    reference: Dagger's "Spell Book" companion achieves a real macOS
+ *    global hotkey via a *separate*, independently-signed standalone
+ *    app — confirmed by inspecting its installed binary's own code
+ *    signature, a Developer ID distinct from Adobe's — bridging into a
+ *    CEP background extension of its own, the same shape as this one.
+ *    Replicating that on macOS would need its own signed+notarized
+ *    helper app, which needs an Apple Developer Program membership this
+ *    project doesn't have. Decision: no macOS global hotkey for now —
+ *    Window ▸ Extensions ▸ KVN Command is the only way to open the
+ *    palette on macOS.)
+ * 2. Hosts a plain local HTTP server via Node's built-in `http` module
+ *    (`/ping`, `/open`) — kept for manual testing/debugging.
  *
  * Both call the same native window.__adobe_cep__.requestOpenExtension()
  * binding to open/focus the actual KVN Command window
@@ -29,32 +37,21 @@
 var http = require("http");
 var path = require("path");
 
-// __dirname here resolves to the EXTENSION ROOT (confirmed via
-// /debug-paths — it's the same kind of root-relative resolution
-// surprise for <script src>-loaded files hit earlier in the abandoned
-// UXP build), not this script's own client/bg/ folder. Build the path
-// to the native loader explicitly from that root instead of a relative
-// require().
+// __dirname here resolves to the EXTENSION ROOT, not this script's own
+// client/bg/ folder — confirmed via live testing (a <script src>-loaded
+// top-level file gets __dirname/__filename matching the *page's*
+// location, not its own; the same class of surprise hit earlier in the
+// abandoned UXP build). Build the path to the native loader explicitly
+// from that root instead of a relative require().
 var UIOHOOK_LOADER_PATH = path.join(__dirname, "client", "bg", "native", "uiohook-loader.js");
 
 var PORT = 51234;
 var HOST = "127.0.0.1";
 var MAIN_EXTENSION_ID = "com.kvn.command.main";
 
-// KILL SWITCH, now confirmed NOT a native crash: calling initGlobalHotkey()
-// on demand via /enable-hotkey (after the bg extension is already up and
-// running invisibly, auto-started by StartOn AppOnline) returns a normal
-// 200 and doesn't kill the HTTP server, so the addon loads/starts without
-// crashing the process. The earlier "window never appears" symptom was a
-// red herring: AutoVisible=false + StartOn AppOnline means the bg window
-// is *never supposed to become visible* — it was never a rendering crash.
-// Keeping this flag (default false, flip via /enable-hotkey per session
-// or set true here once the physical Ctrl+Cmd+K keypress is confirmed
-// working end-to-end) while pinning down whether the hook actually FIRES
-// (most likely candidate: macOS Input Monitoring / Accessibility
-// permission for Premiere/CEPHtmlEngine, which a background helper
-// process may not get auto-prompted for).
-var ENABLE_GLOBAL_HOTKEY = false;
+// The native addon is only ever attempted on win32 — see the file header
+// for why macOS is permanently excluded, not just currently disabled.
+var GLOBAL_HOTKEY_SUPPORTED_PLATFORM = process.platform === "win32";
 
 function openMainWindow() {
   if (!window.__adobe_cep__ || typeof window.__adobe_cep__.requestOpenExtension !== "function") {
@@ -63,7 +60,7 @@ function openMainWindow() {
   window.__adobe_cep__.requestOpenExtension(MAIN_EXTENSION_ID, "");
 }
 
-// --- Global keyboard shortcut (uiohook-napi) --------------------------
+// --- Global keyboard shortcut (uiohook-napi, Windows only) -------------
 
 var hotkeyStatusEl = null;
 var lastHotkeyStatus = "not initialized";
@@ -92,11 +89,10 @@ function initGlobalHotkey() {
     return;
   }
 
-  // Ctrl+Cmd+K (mac) / Ctrl+Win+K (windows) — matches store.js's
-  // shortcutHint. uiohook-napi's keydown events already carry resolved
-  // ctrlKey/altKey/shiftKey/metaKey booleans (metaKey = Cmd on mac, the
-  // Windows key on Windows), so no manual modifier-state tracking is
-  // needed here.
+  // Ctrl+Win+K — matches store.js's shortcutHint for Windows. uiohook-napi's
+  // keydown events already carry resolved ctrlKey/metaKey booleans
+  // (metaKey = the Windows key here), so no manual modifier-state
+  // tracking is needed.
   var TARGET_KEYCODE = uiohook.UiohookKey.K;
   var lastTriggerAt = 0;
   var DEBOUNCE_MS = 400;
@@ -119,17 +115,17 @@ function initGlobalHotkey() {
   try {
     uiohook.uIOhook.start();
     console.log("[KVN Command BG] Global hotkey listener started (" + uiohook.supportedPlatformArch() + ").");
-    setHotkeyStatus("Global shortcut active (Ctrl+Cmd/Win+K).", false);
+    setHotkeyStatus("Global shortcut active (Ctrl+Win+K).", false);
   } catch (err) {
     console.error("[KVN Command BG] Failed to start uiohook:", err);
     setHotkeyStatus("Start error: " + (err && err.message ? err.message : String(err)), true);
   }
 }
 
-if (ENABLE_GLOBAL_HOTKEY) {
+if (GLOBAL_HOTKEY_SUPPORTED_PLATFORM) {
   initGlobalHotkey();
 } else {
-  setHotkeyStatus("Global shortcut disabled (debugging a native-addon startup crash).", true);
+  setHotkeyStatus("No global shortcut on " + process.platform + " — use Window ▸ Extensions.", false);
 }
 
 var server = http.createServer(function (req, res) {
@@ -160,40 +156,6 @@ var server = http.createServer(function (req, res) {
     return;
   }
 
-  // Diagnostic: how does this CEP mixed-context Node engine actually
-  // resolve module paths for a script loaded via <script src>? A prior
-  // bug in the (since-abandoned) UXP build turned out to be exactly this
-  // kind of relative-path resolution surprise, so don't guess here.
-  if (req.url === "/debug-paths") {
-    var info = {
-      __dirname: typeof __dirname !== "undefined" ? __dirname : "(undefined)",
-      __filename: typeof __filename !== "undefined" ? __filename : "(undefined)",
-      cwd: process.cwd(),
-      locationHref: typeof window !== "undefined" && window.location ? window.location.href : "(no window.location)",
-    };
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(info, null, 2));
-    return;
-  }
-
-  // Debug-only: trigger the native addon load on demand, after the window
-  // is already open and responding, instead of at page-load time. If this
-  // request never gets a response (curl hangs / connection drops) while
-  // the bg window disappears, that confirms a native crash rather than a
-  // catchable JS error — a JS error here would still return a 500 below.
-  if (req.url === "/enable-hotkey") {
-    try {
-      initGlobalHotkey();
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      res.end("hotkey init attempted, check the bg window's status line");
-    } catch (err) {
-      console.error("[KVN Command BG] initGlobalHotkey threw:", err);
-      res.writeHead(500, { "Content-Type": "text/plain" });
-      res.end("error: " + (err && err.message ? err.message : String(err)));
-    }
-    return;
-  }
-
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("not found");
 });
@@ -208,10 +170,5 @@ server.listen(PORT, HOST, function () {
   console.log("[KVN Command BG] Listening on http://" + HOST + ":" + PORT + " (Node " + process.version + ")");
 });
 
-// Surfaced in the (currently still manually-openable, for debugging)
-// window itself — this is the concrete data point needed to know which
-// native global-hotkey library (if any) could actually run here, since
-// CEP's embedded Node version varies by CEP release and native addons
-// are Node-ABI-sensitive.
 var versionEl = document.getElementById("node-version");
 if (versionEl) versionEl.textContent = "Node.js " + process.version;
