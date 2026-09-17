@@ -4,12 +4,19 @@
  * Runs continuously (AutoVisible in the manifest) with Node.js enabled.
  * It does two things:
  *
- * 1. Hosts a global keyboard hook via the bundled uiohook-napi native
- *    addon (see ./native/uiohook-loader.js) so pressing the KVN Command
- *    shortcut (Ctrl+Cmd+K on mac, Ctrl+Win+K on Windows) opens/focuses
- *    the real KVN Command window — no OS-level shortcut configuration
- *    and no external app required, satisfying the "only Premiere + the
- *    plugin" constraint.
+ * 1. On Windows only: hosts a global keyboard hook via the bundled
+ *    uiohook-napi native addon (see ./native/uiohook-loader.js) so
+ *    pressing Ctrl+Win+K opens/focuses the real KVN Command window — no
+ *    OS-level shortcut configuration and no external app required.
+ *    Confirmed NOT possible on macOS: loading this same addon inside
+ *    Premiere's process fails with a hard macOS security error
+ *    (`dlopen ... different Team IDs` — hardened-runtime library
+ *    validation blocks any native code not signed with Adobe's own Team
+ *    ID from loading inside Premiere/CEP's process; no code change on
+ *    our side can work around this without a code-signed, notarized
+ *    standalone helper process, which needs an Apple Developer account
+ *    we don't have here). See README "Opening the window" for the
+ *    current state of the mac story.
  * 2. Hosts a plain local HTTP server via Node's built-in `http` module,
  *    kept for manual testing/debugging (`/ping`, `/open`) since it needs
  *    no native binary and is trivial to curl by hand.
