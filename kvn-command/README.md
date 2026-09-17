@@ -106,63 +106,78 @@ through any *documented* Adobe API, and Premiere's own Keyboard Shortcuts
 editor doesn't expose individual extensions as bindable commands either
 (confirmed by testing — searching "KVN Command" or "extension" there
 finds nothing, only the generic "Find Extensions on Exchange..." item).
+The solution differs by platform, for a confirmed technical reason (not
+a preference):
 
-**What's implemented is a genuinely global hotkey, on both platforms,
-using only Premiere + this plugin — no external app, no manual OS
-Settings configuration required.** `client/bg/` is a second, invisible
-companion CEP extension (`com.kvn.command.bg`) that starts with Premiere
-(`AutoVisible: false` + `<StartOn>` the `AppOnline` event — the correct
-pattern for an always-running `Custom`-type extension; `AutoVisible: true`
-alone only reliably auto-launches `Panel`-type extensions) and, with
-Node.js enabled via `--enable-nodejs --mixed-context`, loads a bundled
-native addon that installs a real OS-level global keyboard hook:
+### Windows — real global hotkey, no setup
+
+`client/bg/` is a second, invisible companion CEP extension
+(`com.kvn.command.bg`) that starts with Premiere (`AutoVisible: false` +
+`<StartOn>` the `AppOnline` event — the correct pattern for an
+always-running `Custom`-type extension; `AutoVisible: true` alone only
+reliably auto-launches `Panel`-type extensions) and, with Node.js
+enabled via `--enable-nodejs --mixed-context`, loads a bundled native
+addon that installs a real OS-level global keyboard hook:
 [`uiohook-napi`](https://github.com/SnosMe/uiohook-napi) (MIT-licensed
-N-API bindings for libuiohook). Prebuilt binaries for `darwin-arm64`,
-`darwin-x64`, `win32-x64`, and `win32-arm64` are bundled directly under
-`client/bg/native/prebuilds/` (Node-API is ABI-stable, so these run
-unmodified across Node major versions — no compilation step, ever,
-for any user). `client/bg/native/uiohook-loader.js` is a small
-dependency-free loader that picks the right binary for
-`process.platform`/`process.arch` and re-exposes the same
-event-emitter API as the upstream package (no `node-gyp-build`
-dependency needed, since there's no real `node_modules` resolution
-happening inside a CEP extension folder).
+N-API bindings for libuiohook). Prebuilt binaries are bundled directly
+under `client/bg/native/prebuilds/` (Node-API is ABI-stable, so these
+run unmodified across Node major versions — no compilation step for any
+user). `client/bg/native/uiohook-loader.js` is a small dependency-free
+loader that picks the right binary for `process.platform`/`process.arch`
+and re-exposes the same event-emitter API as the upstream package (no
+`node-gyp-build` dependency needed, since there's no real `node_modules`
+resolution inside a CEP extension folder).
 
-`client/bg/app.js` listens for `keydown` events from the hook and checks
-for `Ctrl+Cmd+K` (mac) / `Ctrl+Win+K` (Windows) — matching `metaKey`
-(Cmd/Win) + `ctrlKey` + the `K` keycode, all resolved for us by
-uiohook-napi itself. On a match it calls the native
+`client/bg/app.js` only attempts this on `process.platform === "win32"`.
+It listens for `keydown` and checks for `Ctrl+Win+K` (`ctrlKey` +
+`metaKey`, the Windows key, + the `K` keycode — all resolved for us by
+uiohook-napi), then calls the native
 `window.__adobe_cep__.requestOpenExtension("com.kvn.command.main", "")`
-binding, which opens/focuses the real KVN Command window.
+binding to open/focus the real window.
 
-The bg extension's window also still runs the plain Node `http` server
-from earlier iterations (`GET /ping`, `GET /open` on
-`127.0.0.1:51234`) — kept only because it's a trivial, addon-free way to
-confirm the extension is alive while testing; it's not required for the
-hotkey to work.
+**Not yet independently confirmed on a live Windows Premiere install** —
+verified so far only by inspecting the published npm package's contents
+and Node-API's documented ABI-stability guarantees, not by an actual
+keypress. If it ever fails to load on a given machine, the bg extension
+degrades gracefully (logs the failure, shows it in the bg window's
+`#hotkey-status`) without crashing or blocking the rest of the plugin.
 
-**Not yet independently confirmed in a live Premiere install:** that the
-`AutoVisible: false` + `StartOn AppOnline` combination actually launches
-`com.kvn.command.bg` at Premiere startup without any manual step. Until
-that's confirmed, the manifest keeps a temporary `<Menu>KVN Command
-(background)</Menu>` entry so it can still be opened by hand from
-**Window ▸ Extensions** for testing — remove that entry once auto-start
-is verified. Also not yet live-tested: that the bundled `.node` binary
-actually loads and the hook actually fires inside Premiere's real CEP/CEF
-Node runtime (only verified so far by inspecting the published npm
-package's contents and Node-API's documented ABI-stability guarantees,
-not by an actual keypress in Premiere).
+### macOS — no addon, by design
 
-If the native hook ever fails to load on a given machine (unsupported
-platform/arch, or the binary doesn't load for some other reason), the bg
-extension degrades gracefully: it logs the failure, shows it in the bg
-window (`#hotkey-status`), and falls back to **Window ▸ Extensions ▸ KVN
-Command** as the manual way to open the palette — it does not crash the
-extension or block the effects/transitions search-and-apply features.
+Confirmed via live testing that loading this same addon inside
+Premiere's own process fails with a hard macOS security error
+(`dlopen ... different Team IDs`): hardened-runtime library validation
+blocks any native code not signed with Adobe's own Team ID from loading
+inside Premiere/CEP's process. This is an OS-level restriction, not a
+bug — no amount of path or signing tweaks on our side works around it.
+`client/bg/app.js` therefore never attempts the addon on `darwin`.
+
+(For reference, this is how Dagger's "Spell Book" gets a real macOS
+global hotkey: inspecting its *installed app's own code signature*
+— not its code — shows it's a separate, independently-signed standalone
+app (`/Applications/Spell Book.app`, `TeamIdentifier=42564W9252`,
+distinct from Adobe's), running as its own process, bridging into a CEP
+background extension of its own — the same shape as `client/bg/` here.
+Replicating that needs a comparable signed+notarized helper app, which
+needs an Apple Developer Program membership.)
+
+Until that helper app exists, **macOS uses the OS's own native shortcut
+feature** — no external app, no extra binary, just Premiere + a
+one-time setting:
+
+**System Settings ▸ Keyboard ▸ Keyboard Shortcuts ▸ App Shortcuts ▸ +**,
+Application: Adobe Premiere Pro, Menu Title: `KVN Command` (exactly as
+it reads under Window ▸ Extensions), then set the key combo (confirmed
+working). Plain `Cmd+K` is already Premiere's own Cut shortcut, so pick
+something else (e.g. `Ctrl+Cmd+K`).
+
+### Always available, both platforms
+
+**Window ▸ Extensions ▸ KVN Command**, no setup, works everywhere.
 
 The "Shortcut reminder" field in Settings is still just a label next to
-the search box (`Ctrl+Cmd+K`), unconnected to the actual hook — it's a
-reminder, not a rebind control.
+the search box (`Ctrl+Cmd+K`) — a reminder, not a rebind control, and it
+doesn't know which of the above (if any) you've set up.
 
 ## Architecture
 
@@ -309,10 +324,13 @@ your Premiere has them, same as any effect not in `effects-metadata.js`.
 
 ## What's intentionally NOT implemented yet
 
-- Rebinding the global shortcut from the UI — it's hardcoded to
-  Ctrl+Cmd+K (mac) / Ctrl+Win+K (Windows) in `client/bg/app.js`; see
-  "Opening the window" above for how the hook itself works and what's
-  still unconfirmed live.
+- Rebinding the Windows global shortcut from the UI — it's hardcoded to
+  Ctrl+Win+K in `client/bg/app.js`; see "Opening the window" above for
+  how the hook works and what's still unconfirmed live.
+- A macOS global hotkey without a one-time System Settings ▸ App
+  Shortcuts step — needs a separately signed+notarized helper app (an
+  Apple Developer Program membership this project doesn't have yet); see
+  "Opening the window" above.
 - Reading/applying user-imported **effect presets** (`.prfpset` files) —
   confirmed via Adobe community reports that these do not appear in
   `getVideoEffectList()` at all, so they're invisible to this plugin's
