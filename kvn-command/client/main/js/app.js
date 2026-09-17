@@ -634,7 +634,7 @@ window.addEventListener("unhandledrejection", function (event) {
       });
       lines.sort(function (a, b) {
         if (a.hasMetadata !== b.hasMetadata) return a.hasMetadata ? 1 : -1;
-        return a.displayName.localeCompare(b.displayName);
+        return String(a.displayName).localeCompare(String(b.displayName));
       });
 
       var textarea = el("textarea", "kvn-export-textarea");
