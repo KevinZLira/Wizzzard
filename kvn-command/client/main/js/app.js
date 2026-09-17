@@ -437,6 +437,17 @@ window.addEventListener("unhandledrejection", function (event) {
         if (result.appliedTo > 0) {
           state.userState = store.pushRecent(state.userState, effect.id);
           showToast(toastEl, "Applied " + effect.displayName, false);
+
+          if (state.userState.settings.closeAfterApply && window.__adobe_cep__ && typeof window.__adobe_cep__.closeExtension === "function") {
+            // Spotlight-style: applied, done, get out of the way. Still
+            // gives the toast a moment to actually be seen before the
+            // window disappears.
+            setTimeout(function () {
+              window.__adobe_cep__.closeExtension();
+            }, 500);
+            return;
+          }
+
           // Wait for the toast to actually be seen before clearing the
           // query — clearing immediately shrinks the window (see
           // scheduleResize()) out from under a toast that's positioned
@@ -564,6 +575,16 @@ window.addEventListener("unhandledrejection", function (event) {
           catalog.isAudioSupported() ? null : "This Premiere/QE version didn't report audio filter support.",
           toggleInput(state.userState.settings.showAudioEffects, function (checked) {
             state.userState = store.updateSettings(state.userState, { showAudioEffects: checked });
+          })
+        )
+      );
+
+      wrap.appendChild(
+        settingsRow(
+          "Close after applying",
+          "Applies the effect/transition, then closes the palette immediately — the fast Spotlight-style workflow. Turn off to keep it open for applying several in a row.",
+          toggleInput(state.userState.settings.closeAfterApply, function (checked) {
+            state.userState = store.updateSettings(state.userState, { closeAfterApply: checked });
           })
         )
       );

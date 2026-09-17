@@ -17,6 +17,7 @@ window.KVN.Store = (function () {
     showRecent: true,
     showAudioEffects: true,
     showHiddenEffects: false,
+    closeAfterApply: true, // Spotlight-style: apply, then get out of the way
     shortcutHint: "Ctrl+Cmd+K", // reminder label only — Cmd+K alone is Premiere's own Cut shortcut; see README re: the real bg-extension hotkey setup
   };
 
