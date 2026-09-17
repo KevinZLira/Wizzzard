@@ -593,6 +593,60 @@ window.addEventListener("unhandledrejection", function (event) {
       manageRow.appendChild(hiddenBtn);
       wrap.appendChild(manageRow);
 
+      var exportBtn = el("button", "kvn-link-btn", "Export raw names (debug)");
+      exportBtn.title = "Dump every effect/transition name exactly as this Premiere reports it, so missing PT-BR (or other language) entries in the metadata files can be filled in from real data instead of guessed translations.";
+      exportBtn.addEventListener("click", function () {
+        state.view = "export-names";
+        render();
+      });
+      wrap.appendChild(el("div", null, [exportBtn]));
+
+      container.appendChild(wrap);
+    }
+
+    function renderExportNames(container) {
+      var wrap = el("div", "kvn-settings");
+      var back = el("button", "kvn-back-btn", "← Back to settings");
+      back.addEventListener("click", function () {
+        state.view = "settings";
+        render();
+      });
+      wrap.appendChild(back);
+      wrap.appendChild(el("h2", null, "Raw effect/transition names"));
+      wrap.appendChild(
+        el(
+          "p",
+          "kvn-setting-hint",
+          "Every name below is exactly what this Premiere reports (whatever language it's running in). " +
+            '"has metadata: no" means that entry has no aliases/keywords attached yet — usually because ' +
+            "effects-metadata.js / transitions-metadata.js only lists its English name, and this host isn't " +
+            "running in English. Copy this and send it back to fill those in with real names instead of " +
+            "guessed translations."
+        )
+      );
+
+      var lines = [];
+      state.rawEffects.forEach(function (e) {
+        lines.push({ kind: e.kind, type: "effect", displayName: e.displayName, hasMetadata: !!e.meta });
+      });
+      state.rawTransitions.forEach(function (t) {
+        lines.push({ kind: t.kind, type: "transition", displayName: t.displayName, hasMetadata: !!t.meta });
+      });
+      lines.sort(function (a, b) {
+        if (a.hasMetadata !== b.hasMetadata) return a.hasMetadata ? 1 : -1;
+        return a.displayName.localeCompare(b.displayName);
+      });
+
+      var textarea = el("textarea", "kvn-export-textarea");
+      textarea.readOnly = true;
+      textarea.value = JSON.stringify(lines, null, 2);
+      wrap.appendChild(textarea);
+
+      window.setTimeout(function () {
+        textarea.focus();
+        textarea.select();
+      }, 0);
+
       container.appendChild(wrap);
     }
 
@@ -650,6 +704,9 @@ window.addEventListener("unhandledrejection", function (event) {
           scheduleResize();
         } else if (state.view === "manage-hidden") {
           renderManageList(rootEl, "hidden");
+          scheduleResize();
+        } else if (state.view === "export-names") {
+          renderExportNames(rootEl);
           scheduleResize();
         } else {
           renderPalette(rootEl); // schedules its own resize via renderResultsInto
