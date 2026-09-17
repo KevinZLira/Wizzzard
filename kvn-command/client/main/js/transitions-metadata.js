@@ -78,7 +78,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Morph Cut"],
+    names: ["Morph Cut", "Recorte de metamorfose"],
     category: "Dissolve",
     keywords: [
       "morph cut", "seamless cut", "jump cut fix", "smooth talking head cut",
@@ -97,16 +97,16 @@ window.KVN.TransitionsMetadata = [
 
   // ---------- Iris ----------
   {
-    names: ["Iris Round"],
+    names: ["Iris Round", "Círculo íris"],
     category: "Iris",
     keywords: [
-      "iris", "circle wipe", "round wipe", "spotlight transition",
+      "iris", "circle wipe", "round wipe", "rounded", "spotlight transition",
       "íris", "íris redonda", "abertura circular", "abertura redonda",
-      "efeito de câmera antiga",
+      "arredondado", "efeito de câmera antiga",
     ],
   },
   {
-    names: ["Iris Box"],
+    names: ["Iris Box", "Caixa íris"],
     category: "Iris",
     keywords: [
       "iris", "box wipe", "square wipe", "rectangle wipe",
@@ -114,7 +114,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Iris Diamond"],
+    names: ["Iris Diamond", "Diamante íris"],
     category: "Iris",
     keywords: [
       "iris", "diamond wipe",
@@ -122,7 +122,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Iris Cross"],
+    names: ["Iris Cross", "Cruz íris"],
     category: "Iris",
     keywords: [
       "iris", "cross wipe", "plus wipe",
@@ -132,7 +132,7 @@ window.KVN.TransitionsMetadata = [
 
   // ---------- Page Peel ----------
   {
-    names: ["Page Peel"],
+    names: ["Page Peel", "Passagem de página"],
     category: "Page Peel",
     keywords: [
       "page peel", "page curl", "paper peel",
@@ -151,7 +151,7 @@ window.KVN.TransitionsMetadata = [
 
   // ---------- Slide ----------
   {
-    names: ["Slide"],
+    names: ["Slide", "Deslizar"],
     category: "Slide",
     keywords: [
       "slide", "swipe", "push aside",
@@ -167,7 +167,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Center Split"],
+    names: ["Center Split", "Divisão central"],
     category: "Slide",
     keywords: [
       "center split", "split apart", "divide and slide",
@@ -175,7 +175,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Push"],
+    names: ["Push", "Empurrar"],
     category: "Slide",
     keywords: [
       "push", "slide push", "shove aside",
@@ -183,7 +183,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Split"],
+    names: ["Split", "Dividir"],
     category: "Slide",
     keywords: [
       "split", "divide screen",
@@ -191,7 +191,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Whip"],
+    names: ["Whip", "Chicote"],
     category: "Slide",
     keywords: [
       "whip pan", "whip transition", "fast blur transition", "smash cut blur",
@@ -201,7 +201,7 @@ window.KVN.TransitionsMetadata = [
 
   // ---------- Wipe ----------
   {
-    names: ["Band Wipe"],
+    names: ["Band Wipe", "Listra"],
     category: "Wipe",
     keywords: [
       "wipe", "band wipe", "strip wipe",
@@ -209,7 +209,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Barn Doors"],
+    names: ["Barn Doors", "Abertura de portas"],
     category: "Wipe",
     keywords: [
       "barn doors", "double door wipe",
@@ -313,7 +313,11 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Wipe", "Abertura suave"],
+    // Was wrongly guessed as "Abertura suave" before — that's actually
+    // Soft Wipe's real PT-BR name (confirmed live), and the collision
+    // meant one of the two entries silently never matched. "Abertura" is
+    // this one's confirmed real name.
+    names: ["Wipe", "Abertura"],
     category: "Wipe",
     keywords: [
       "wipe", "sweep transition", "linear wipe",
@@ -361,7 +365,7 @@ window.KVN.TransitionsMetadata = [
     ],
   },
   {
-    names: ["Star Wipe", "Abertura de estrela"],
+    names: ["Star Wipe", "Abertura em estrela", "Abertura de estrela"],
     category: "Wipe",
     keywords: [
       "star wipe",
@@ -387,7 +391,7 @@ window.KVN.TransitionsMetadata = [
 
   // ---------- Zoom ----------
   {
-    names: ["Cross Zoom"],
+    names: ["Cross Zoom", "Zoom cruzado"],
     category: "Zoom",
     keywords: [
       "cross zoom", "zoom transition", "zoom blur transition",

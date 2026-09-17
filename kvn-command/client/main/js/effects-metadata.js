@@ -47,7 +47,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Gaussian Blur (Legacy)"],
+    names: ["Gaussian Blur (Legacy)", "Desfoque Gaussiano (herdado)"],
     category: "Blur & Sharpen",
     keywords: [
       "blur", "legacy", "old", "classic", "gaussian",
@@ -56,7 +56,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Directional Blur"],
+    names: ["Directional Blur", "Desfoque direcional"],
     category: "Blur & Sharpen",
     keywords: [
       "blur", "motion", "direction", "speed", "streak", "motion blur",
@@ -66,7 +66,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Camera Blur"],
+    names: ["Camera Blur", "Desfoque da câmera"],
     category: "Blur & Sharpen",
     keywords: [
       "blur", "focus", "camera", "defocus", "rack focus",
@@ -75,7 +75,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Sharpen"],
+    names: ["Sharpen", "Nitidez"],
     category: "Blur & Sharpen",
     keywords: [
       "sharp", "detail", "focus", "crisp", "clarity", "enhance",
@@ -84,7 +84,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Unsharp Mask"],
+    names: ["Unsharp Mask", "Máscara de nitidez"],
     category: "Blur & Sharpen",
     keywords: [
       "sharp", "detail", "mask", "clarity", "definition",
@@ -95,7 +95,7 @@ window.KVN.EffectsMetadata = [
 
   // ---------- Color Correction / Grading ----------
   {
-    names: ["Lumetri Color"],
+    names: ["Lumetri Color", "Cor de Lumetri"],
     category: "Color Correction",
     keywords: [
       "color", "grade", "grading", "lut", "look", "tone", "color wheel",
@@ -143,7 +143,7 @@ window.KVN.EffectsMetadata = [
 
   // ---------- Distort / Transform ----------
   {
-    names: ["Transform"],
+    names: ["Transform", "Transformar"],
     category: "Distort / Transform",
     keywords: [
       "zoom", "scale", "rotate", "position", "resize", "move", "skew", "anchor point",
@@ -161,7 +161,19 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Crop"],
+    // Confirmed via a live PT-BR host's raw effect list (Settings > Export
+    // raw names): "Recorte arredondado" is this effect's real displayName.
+    names: ["Rounded Corners", "Recorte arredondado"],
+    category: "Distort / Transform",
+    keywords: [
+      "rounded corners", "rounded", "round corners", "corner radius", "rounded rectangle",
+      "cortes arredondados", "cantos arredondados", "arredondar cantos",
+      "bordas arredondadas", "arredondado", "arredondada", "cantos redondos",
+      "recorte redondo", "quadro arredondado",
+    ],
+  },
+  {
+    names: ["Crop", "Cortar"],
     category: "Distort / Transform",
     keywords: [
       "crop", "trim edges", "cut frame", "border", "edge crop",
@@ -197,7 +209,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Warp Stabilizer"],
+    names: ["Warp Stabilizer", "Estabilizador de distorção"],
     category: "Distort / Transform",
     keywords: [
       "stabilize", "shake", "shaky", "steady", "smooth motion", "gimbal",
@@ -206,7 +218,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Camera Shake", "Balanço de câmera"],
+    names: ["Camera Shake", "Tremulação de câmera", "Balanço de câmera"],
     category: "Distort / Transform",
     keywords: [
       "shake", "camera", "wobble", "vibrate", "handheld look",
@@ -251,7 +263,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Rotate", "Girar"],
+    names: ["Rotate", "Giro", "Girar"],
     category: "Distort / Transform",
     keywords: [
       "rotate", "spin", "turn", "revolve",
@@ -289,7 +301,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Posterize"],
+    names: ["Posterize", "Posterizar"],
     category: "Stylize",
     keywords: [
       "posterize", "flatten colors", "poster effect", "banding",
@@ -307,7 +319,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Glow", "Resplendor"],
+    names: ["Glow", "Brilho", "Resplendor"],
     category: "Stylize",
     keywords: [
       "glow", "shine", "bloom", "halo", "radiance",
@@ -316,7 +328,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Edge Glow", "Brilho de aresta"],
+    names: ["Edge Glow", "Brilho de borda", "Brilho de aresta"],
     category: "Stylize",
     keywords: [
       "glow", "edge", "outline glow", "rim light effect",
@@ -325,7 +337,7 @@ window.KVN.EffectsMetadata = [
     ],
   },
   {
-    names: ["Wonder Glow", "Brilho maravilhoso"],
+    names: ["Wonder Glow", "Brilho mágico", "Brilho maravilhoso"],
     category: "Stylize",
     keywords: [
       "glow", "dreamy", "soft glow", "ethereal", "magical look",
@@ -482,7 +494,7 @@ window.KVN.EffectsMetadata = [
 
   // ---------- Utility / Generate ----------
   {
-    names: ["Cineon Converter", "Conversor Cineon"],
+    names: ["Cineon Converter", "Conversor de Cineon", "Conversor Cineon"],
     category: "Utility",
     keywords: [
       "cineon", "log", "log footage", "convert log", "10-bit log", "dpx",
