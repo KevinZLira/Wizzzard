@@ -1,127 +1,136 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<ExtensionManifest Version="9.0" ExtensionBundleId="com.kvn.command" ExtensionBundleVersion="0.2.0" ExtensionBundleName="KVN Command"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <ExtensionList>
-        <Extension Id="com.kvn.command.main" Version="0.2.0"/>
-        <Extension Id="com.kvn.command.bg" Version="0.2.0"/>
-    </ExtensionList>
-    <ExecutionEnvironment>
-        <HostList>
-            <!-- CEP is still fully supported alongside UXP in current
-                 Premiere Pro releases; this is the architecture confirmed
-                 working end-to-end by real signed third-party extensions. -->
-            <Host Name="PPRO" Version="[14.0,99.9]"/>
-        </HostList>
-        <LocaleList>
-            <Locale Code="All"/>
-        </LocaleList>
-        <RequiredRuntimeList>
-            <RequiredRuntime Name="CSXS" Version="9.0"/>
-        </RequiredRuntimeList>
-    </ExecutionEnvironment>
-
-    <DispatchInfoList>
-        <Extension Id="com.kvn.command.main">
-            <DispatchInfo>
-                <Resources>
-                    <MainPath>./client/main/index.html</MainPath>
-                    <ScriptPath>./host/ppro.jsx</ScriptPath>
-                    <CEFCommandLine>
-                        <Parameter>--allow-file-access</Parameter>
-                        <Parameter>--allow-file-access-from-files</Parameter>
-                    </CEFCommandLine>
-                </Resources>
-                <Lifecycle>
-                    <AutoVisible>true</AutoVisible>
-                </Lifecycle>
-                <UI>
-                    <Type>Custom</Type>
-                    <Menu>KVN Command</Menu>
-                    <!-- Starts as just the search row — Spotlight-style —
-                         and grows via resizeContent() as results appear.
-                         resizeContent() is confirmed supported for
-                         Custom/modeless CEP windows in Premiere Pro (the
-                         restriction that applies is specific to the
-                         "Panel" UI type, not this one). -->
-                    <Geometry>
-                        <Size>
-                            <Width>520</Width>
-                            <Height>56</Height>
-                        </Size>
-                        <MinSize>
-                            <Width>420</Width>
-                            <Height>56</Height>
-                        </MinSize>
-                        <MaxSize>
-                            <Width>640</Width>
-                            <Height>560</Height>
-                        </MaxSize>
-                    </Geometry>
-                    <Icons>
-                        <Icon Type="Normal">./icons/plugin-icon.png</Icon>
-                        <Icon Type="RollOver">./icons/plugin-icon.png</Icon>
-                        <Icon Type="Disabled">./icons/plugin-icon.png</Icon>
-                        <Icon Type="DarkNormal">./icons/dark.png</Icon>
-                        <Icon Type="DarkRollOver">./icons/dark.png</Icon>
-                    </Icons>
-                </UI>
-            </DispatchInfo>
-        </Extension>
-
-        <!-- Invisible companion extension: installs a real OS-global
-             keyboard hook (client/bg/native, bundled uiohook-napi) so
-             Ctrl+Cmd/Win+K opens/focuses the real KVN Command window
-             above, via window.__adobe_cep__.requestOpenExtension() —
-             no external app or OS Settings configuration needed. Also
-             runs a plain HTTP server kept for manual debugging. See
-             README "Opening the window" for details and caveats. -->
-        <Extension Id="com.kvn.command.bg">
-            <DispatchInfo>
-                <Resources>
-                    <MainPath>./client/bg/index.html</MainPath>
-                    <CEFCommandLine>
-                        <Parameter>--allow-file-access</Parameter>
-                        <Parameter>--allow-file-access-from-files</Parameter>
-                        <Parameter>--enable-nodejs</Parameter>
-                        <Parameter>--mixed-context</Parameter>
-                    </CEFCommandLine>
-                </Resources>
-                <!-- The documented pattern for an invisible Custom-type
-                     extension that should run continuously from Premiere
-                     startup is AutoVisible=false + StartOn the
-                     AppOnline event — NOT AutoVisible=true, which is a
-                     Panel-type-only auto-open behavior. This was the
-                     actual bug behind it never starting on its own. -->
-                <Lifecycle>
-                    <AutoVisible>false</AutoVisible>
-                    <StartOn>
-                        <Event>com.adobe.csxs.events.AppOnline</Event>
-                    </StartOn>
-                </Lifecycle>
-                <UI>
-                    <Type>Custom</Type>
-                    <!-- TEMPORARY: giving this a <Menu> entry so it can be
-                         opened manually via Window > Extensions, to test
-                         whether AutoVisible actually auto-launches a
-                         Custom-type extension at all, or whether it only
-                         applies to Panel-type ones. Remove once confirmed
-                         either way. -->
-                    <Menu>KVN Command (background)</Menu>
-                    <Geometry>
-                        <Size>
-                            <Width>200</Width>
-                            <Height>80</Height>
-                        </Size>
-                    </Geometry>
-                    <Icons>
-                        <Icon Type="Normal">./icons/plugin-icon.png</Icon>
-                        <Icon Type="RollOver">./icons/plugin-icon.png</Icon>
-                        <Icon Type="Disabled">./icons/plugin-icon.png</Icon>
-                        <Icon Type="DarkNormal">./icons/dark.png</Icon>
-                        <Icon Type="DarkRollOver">./icons/dark.png</Icon>
-                    </Icons>
-                </UI>
-            </DispatchInfo>
-        </Extension>
-    </DispatchInfoList>
+<ExtensionManifest Version="9.0" ExtensionBundleId="com.kvn.command" ExtensionBundleVersion="0.3.5" ExtensionBundleName="KVN Console" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ExtensionList>
+    <Extension Id="com.kvn.command.main" Version="0.3.5" />
+    <Extension Id="com.kvn.command.bg" Version="0.3.5" />
+    <Extension Id="com.kvn.command.shortcuts" Version="0.3.5" />
+  </ExtensionList>
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="PPRO" Version="[14.0,99.9]" />
+    </HostList>
+    <LocaleList>
+      <Locale Code="All" />
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="9.0" />
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+  <DispatchInfoList>
+    <Extension Id="com.kvn.command.main">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./client/main/index.html</MainPath>
+          <ScriptPath>./host/ppro.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Custom</Type>
+          <Menu>KVN Console</Menu>
+          <Geometry>
+            <Size>
+              <Width>520</Width>
+              <Height>56</Height>
+            </Size>
+            <MinSize>
+              <Width>420</Width>
+              <Height>56</Height>
+            </MinSize>
+            <MaxSize>
+              <Width>640</Width>
+              <Height>560</Height>
+            </MaxSize>
+          </Geometry>
+          <Icons>
+            <Icon Type="Normal">./icons/plugin-icon.png</Icon>
+            <Icon Type="RollOver">./icons/plugin-icon.png</Icon>
+            <Icon Type="Disabled">./icons/plugin-icon.png</Icon>
+            <Icon Type="DarkNormal">./icons/dark.png</Icon>
+            <Icon Type="DarkRollOver">./icons/dark.png</Icon>
+          </Icons>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+    <Extension Id="com.kvn.command.bg">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./client/bg/index.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>false</AutoVisible>
+          <StartOn>
+            <Event>com.adobe.csxs.events.ApplicationInitialized</Event>
+            <Event>com.adobe.csxs.events.AppOnline</Event>
+          </StartOn>
+        </Lifecycle>
+        <UI>
+          <Type>Custom</Type>
+          <Geometry>
+            <Size>
+              <Width>200</Width>
+              <Height>80</Height>
+            </Size>
+          </Geometry>
+          <Icons>
+            <Icon Type="Normal">./icons/plugin-icon.png</Icon>
+            <Icon Type="RollOver">./icons/plugin-icon.png</Icon>
+            <Icon Type="Disabled">./icons/plugin-icon.png</Icon>
+            <Icon Type="DarkNormal">./icons/dark.png</Icon>
+            <Icon Type="DarkRollOver">./icons/dark.png</Icon>
+          </Icons>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+    <Extension Id="com.kvn.command.shortcuts">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./client/shortcuts/index.html</MainPath>
+          <CEFCommandLine>
+            <Parameter>--allow-file-access</Parameter>
+            <Parameter>--allow-file-access-from-files</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Custom</Type>
+          <Menu>KVN Console - Atalhos</Menu>
+          <Geometry>
+            <Size>
+              <Width>600</Width>
+              <Height>430</Height>
+            </Size>
+            <MinSize>
+              <Width>560</Width>
+              <Height>400</Height>
+            </MinSize>
+            <MaxSize>
+              <Width>640</Width>
+              <Height>560</Height>
+            </MaxSize>
+          </Geometry>
+          <Icons>
+            <Icon Type="Normal">./icons/plugin-icon.png</Icon>
+            <Icon Type="RollOver">./icons/plugin-icon.png</Icon>
+            <Icon Type="Disabled">./icons/plugin-icon.png</Icon>
+            <Icon Type="DarkNormal">./icons/dark.png</Icon>
+            <Icon Type="DarkRollOver">./icons/dark.png</Icon>
+          </Icons>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
 </ExtensionManifest>

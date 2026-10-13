@@ -18,7 +18,7 @@ window.KVN.Store = (function () {
     showAudioEffects: true,
     showHiddenEffects: false,
     closeAfterApply: true, // Spotlight-style: apply, then get out of the way
-    shortcutHint: "Ctrl+Cmd+K", // reminder label only — Cmd+K alone is Premiere's own Cut shortcut; see README re: the real bg-extension hotkey setup
+    shortcutHint: /Win/.test(navigator.platform) ? "Ctrl+Alt+K" : "Ctrl+Cmd+K",
   };
 
   var MAX_RECENT = 12;
@@ -29,7 +29,7 @@ window.KVN.Store = (function () {
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (err) {
-      console.error("[KVN Command] Failed to read local store:", err);
+      console.error("[KVN Console] Failed to read local store:", err);
       return null;
     }
   }
@@ -38,7 +38,7 @@ window.KVN.Store = (function () {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (err) {
-      console.error("[KVN Command] Failed to persist local store:", err);
+      console.error("[KVN Console] Failed to persist local store:", err);
     }
   }
 

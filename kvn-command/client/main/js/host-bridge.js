@@ -46,7 +46,7 @@ window.KVN.HostBridge = (function () {
       // ran the JS engine's default error string instead of our function
       // — "EvalScript error." or similar, not JSON.
       lastError = 'Host returned non-JSON for "' + fnName + '": ' + JSON.stringify(raw);
-      console.error("[KVN Command] Failed to parse host response for", fnName, ":", raw, err);
+      console.error("[KVN Console] Failed to parse host response for", fnName, ":", raw, err);
       return null;
     }
   }

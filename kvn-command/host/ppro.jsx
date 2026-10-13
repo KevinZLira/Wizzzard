@@ -1,5 +1,5 @@
 /**
- * host/ppro.jsx — ExtendScript host bridge for KVN Command.
+ * host/ppro.jsx — ExtendScript host bridge for KVN Console.
  *
  * ExtendScript here is plain ES3 (var/function only — no let/const, arrow
  * functions, template literals, or destructuring), and has no built-in

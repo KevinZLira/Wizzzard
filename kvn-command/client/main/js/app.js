@@ -1,5 +1,5 @@
 /**
- * app.js — KVN Command panel controller (CEP).
+ * app.js — KVN Console panel controller (CEP).
  *
  * Renders the command-palette UI and wires up keyboard-first interaction:
  * type -> instant results -> arrow keys -> Enter to apply. No require()
@@ -11,17 +11,17 @@
 
 function renderFatalError(err) {
   var message = (err && err.stack) || String(err);
-  console.error("[KVN Command] Fatal error:", err);
+  console.error("[KVN Console] Fatal error:", err);
   try {
     document.body.innerHTML = "";
     var pre = document.createElement("pre");
     pre.style.cssText =
       "color:#ff5c5c;background:#080909;padding:14px;margin:0;white-space:pre-wrap;" +
       "font-family:monospace;font-size:11px;height:100vh;box-sizing:border-box;overflow:auto;";
-    pre.textContent = "KVN Command failed to start:\n\n" + message;
+    pre.textContent = "KVN Console failed to start:\n\n" + message;
     document.body.appendChild(pre);
   } catch (renderErr) {
-    console.error("[KVN Command] Failed to render fatal error UI:", renderErr);
+    console.error("[KVN Console] Failed to render fatal error UI:", renderErr);
   }
 }
 
@@ -36,7 +36,7 @@ function renderFatalError(err) {
  * layout/sizing.
  */
 function showGlobalError(message) {
-  console.error("[KVN Command] Unhandled error:", message);
+  console.error("[KVN Console] Unhandled error:", message);
   var el = document.getElementById("kvn-global-error");
   if (!el) {
     el = document.createElement("div");
@@ -177,7 +177,7 @@ window.addEventListener("unhandledrejection", function (event) {
       try {
         state.context = await bridge.getSelectionContext();
       } catch (err) {
-        console.error("[KVN Command] Failed to read selection context:", err);
+        console.error("[KVN Console] Failed to read selection context:", err);
         state.context = { count: 0, kind: "unknown" };
       }
     }
@@ -186,14 +186,14 @@ window.addEventListener("unhandledrejection", function (event) {
       try {
         state.rawEffects = await catalog.loadRawEffects(opts || {});
       } catch (err) {
-        console.error("[KVN Command] Failed to load host effects:", err);
+        console.error("[KVN Console] Failed to load host effects:", err);
         state.rawEffects = [];
       }
       if (TRANSITIONS_ENABLED) {
         try {
           state.rawTransitions = await transitionsCatalog.loadRawTransitions(opts || {});
         } catch (err) {
-          console.error("[KVN Command] Failed to load host transitions:", err);
+          console.error("[KVN Console] Failed to load host transitions:", err);
           state.rawTransitions = [];
         }
       }
@@ -224,7 +224,8 @@ window.addEventListener("unhandledrejection", function (event) {
       input.placeholder = "search effects...";
       input.value = state.query;
 
-      var shortcutBadge = el("span", "kvn-shortcut-badge", state.userState.settings.shortcutHint);
+      var shortcutBadge = el("span", "kvn-shortcut-badge", window.KVN.Hotkey.windows ? window.KVN.Hotkey.getStatus().shortcut : state.userState.settings.shortcutHint);
+      shortcutBadge.id = "kvn-shortcut-badge";
       var settingsBtn = el("button", "kvn-settings-btn", "⚙");
       settingsBtn.title = "Settings";
       settingsBtn.addEventListener("click", function () {
@@ -398,7 +399,7 @@ window.addEventListener("unhandledrejection", function (event) {
     }
 
     async function applyActive() {
-      console.log("[KVN Command] applyActive fired, activeIndex=", state.activeIndex);
+      console.log("[KVN Console] applyActive fired, activeIndex=", state.activeIndex);
       var effect = state.results[state.activeIndex];
       if (!effect) {
         showGlobalError("applyActive: no effect at activeIndex " + state.activeIndex + " (results.length=" + state.results.length + ")");
@@ -491,7 +492,9 @@ window.addEventListener("unhandledrejection", function (event) {
         applyActive();
       } else if (e.key === "Escape") {
         e.preventDefault();
-        if (state.query) {
+        if (window.__adobe_cep__) {
+          window.__adobe_cep__.closeExtension();
+        } else if (state.query) {
           state.query = "";
           input.value = "";
           computeResults();
@@ -534,19 +537,30 @@ window.addEventListener("unhandledrejection", function (event) {
 
       wrap.appendChild(el("h2", null, "Settings"));
 
-      var shortcutHint = el("input", "kvn-number-input");
-      shortcutHint.style.width = "110px";
-      shortcutHint.value = state.userState.settings.shortcutHint;
-      shortcutHint.addEventListener("change", function () {
-        state.userState = store.updateSettings(state.userState, { shortcutHint: shortcutHint.value });
-      });
+      var shortcutHint;
+      if (window.KVN.Hotkey.windows) {
+        shortcutHint = el("button", "kvn-link-btn", "Escolher tecla…");
+        shortcutHint.addEventListener("click", window.KVN.Hotkey.openHub);
+      } else {
+        shortcutHint = el("input", "kvn-number-input");
+        shortcutHint.style.width = "110px";
+        shortcutHint.value = state.userState.settings.shortcutHint;
+        shortcutHint.addEventListener("change", function () {
+          state.userState = store.updateSettings(state.userState, { shortcutHint: shortcutHint.value });
+        });
+      }
       wrap.appendChild(
         settingsRow(
-          "Shortcut reminder",
-          "CEP extension windows aren't listed in Premiere's Keyboard Shortcuts editor the way docked panels are, so this is a label only — see the README for the real way to trigger this window.",
+          window.KVN.Hotkey.windows ? "Keyboard shortcut" : "Shortcut reminder",
+          window.KVN.Hotkey.windows ? "Escolha uma tecla ou combinação no hub de atalhos do KVN Console." : "Set your App Shortcut in macOS System Settings. This field is a reminder.",
           shortcutHint
         )
       );
+
+      var shortcutStatus = el("div", "kvn-setting-hint", window.KVN.Hotkey.getStatus().message);
+      shortcutStatus.id = "kvn-shortcut-status";
+      shortcutStatus.setAttribute("role", "status");
+      wrap.appendChild(shortcutStatus);
 
       var resultLimit = el("input", "kvn-number-input");
       resultLimit.type = "number";
@@ -750,7 +764,13 @@ window.addEventListener("unhandledrejection", function (event) {
       }
     }
 
-    document.getElementById("kvn-root").textContent = "KVN Command — starting…";
+    document.getElementById("kvn-root").textContent = "KVN Console — starting…";
+    window.KVN.Hotkey.subscribe(function (status) {
+      var badge = document.getElementById("kvn-shortcut-badge");
+      if (badge && window.KVN.Hotkey.windows) badge.textContent = status.shortcut;
+      var label = document.getElementById("kvn-shortcut-status");
+      if (label) label.textContent = status.message;
+    });
     bootstrap(document.getElementById("kvn-root"));
 
     // The floating window has no dock/show lifecycle callbacks like a UXP

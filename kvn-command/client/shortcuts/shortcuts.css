@@ -1,0 +1,30 @@
+/* Inherit the palette's typography and color tokens; only hub layout lives here. */
+html { overflow: auto; }
+body.kvn-shortcuts { padding: 22px 24px; overflow: visible; }
+.hub-category { display: flex; align-items: center; gap: 8px; color: var(--kvn-text-dim); font-size: 10.5px; letter-spacing: .08em; }
+.hub-category .kvn-prompt { font-size: 14px; }
+h1 { margin: 9px 0 8px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+p { margin: 0; color: var(--kvn-text-dim); font-size: 12px; line-height: 1.6; }
+p strong { color: var(--kvn-text); font-weight: 500; }
+.list { margin-top: 22px; border-top: 1px solid var(--kvn-border); }
+.row { display: flex; align-items: center; gap: 10px; padding: 17px 0; border-bottom: 1px solid var(--kvn-border); }
+.name { flex: 1; min-width: 0; }
+.name strong { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 500; }
+.name small { display: block; color: var(--kvn-text-dim); font-size: 11px; line-height: 1.5; }
+button, input { font: inherit; }
+button { padding: 7px 11px; border: 1px solid var(--kvn-border); border-radius: 6px; background: transparent; color: var(--kvn-text); cursor: pointer; font-size: 12px; transition: color var(--kvn-fast), border-color var(--kvn-fast), background var(--kvn-fast); }
+button:hover { border-color: var(--kvn-accent); color: var(--kvn-accent); }
+button:focus-visible { outline: 1px solid var(--kvn-accent); outline-offset: 3px; }
+.key { min-width: 136px; text-align: center; white-space: nowrap; }
+.key.recording { border-color: var(--kvn-accent); background: var(--kvn-accent-dim); color: var(--kvn-accent); }
+.capture-input { width: 174px; min-width: 0; padding: 7px 10px; border: 1px solid var(--kvn-accent); border-radius: 6px; outline: none; background: var(--kvn-bg-raised); color: var(--kvn-text); caret-color: var(--kvn-accent); font-size: 12px; }
+.capture-input::placeholder { color: var(--kvn-accent); }
+.remove { width: 27px; padding: 5px; border-color: transparent; color: var(--kvn-text-dim); font-size: 16px; }
+.remove:hover { border-color: var(--kvn-danger); color: var(--kvn-danger); }
+.badge { display: block; min-height: 0; margin-top: 4px; color: var(--kvn-accent); font-size: 10.5px; }
+.badge:empty { display: none; }
+.status { min-height: 32px; margin-top: 14px; color: var(--kvn-text-dim); font-size: 11px; line-height: 1.5; }
+.status.error { color: var(--kvn-danger); }
+.actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; }
+.primary { border-color: var(--kvn-accent); background: var(--kvn-accent-dim); color: var(--kvn-accent); }
+.primary:hover { background: var(--kvn-accent); color: var(--kvn-bg); }
